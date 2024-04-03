@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, BadRequestException } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { ethers } from 'ethers';
 import { Observable, lastValueFrom } from 'rxjs';
@@ -80,13 +80,18 @@ export class BlockCacheService implements OnModuleInit {
     return this.blockCache.length === this.MAX_CACHE_SIZE
   }
 
-  latestBlock() :BlockWithTransactions {
+  getLatestBlock() :BlockWithTransactions {
     // access the last item pused into cache array
     return this.blockCache[-1]
   }
 
+  getLatestNBlocks(n: number) :BlockWithTransactions[] {
+    if (n > this.MAX_CACHE_SIZE) throw new BadRequestException(`${n} exceed hard limit ${this.MAX_CACHE_SIZE}`)
+    return this.blockCache.slice(-n)
+  }
+
   isCacheStale() :boolean {
-    const latestBlockTimestamp = this.latestBlock().timestamp;
+    const latestBlockTimestamp = this.getLatestBlock().timestamp;
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const blockInterval = this.configService.get<string>('BLOCK_INTERVAL');
     return true
