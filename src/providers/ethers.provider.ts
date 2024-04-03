@@ -55,6 +55,7 @@ export class EthersProvider implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  //TODO: Think of a better name
   getProvider(): ethers.providers.WebSocketProvider {
     return this.provider;
   }

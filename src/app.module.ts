@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { BlockFeesService } from './block-fees/block-fees.service';
+import { BlockCacheService } from './block-cache/block-cache.service';
+import { ethersProvider } from './providers/ethers.provider';
+import { BlockCacheModule } from './block-cache/block-cache.module';
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService, BlockFeesService],
+  imports: [BlockCacheModule],
+  controllers: [],
+  providers: [BlockCacheService, ethersProvider],
 })
 export class AppModule {}
