@@ -14,8 +14,8 @@ export const ETHERS_PROVIDER = 'ETHERS_PROVIDER';
 
 @Injectable() // Not strictly necessary in this case, but good practice
 export class EthersProvider implements OnModuleInit, OnModuleDestroy {
-  private provider: ethers.providers.WebSocketProvider;
-  private readonly logger = new Logger(EthersProvider.name);
+  provider: ethers.providers.WebSocketProvider;
+  readonly logger = new Logger(EthersProvider.name);
   private newBlockSubject = new Subject<number>(); // For emitting new block numbers
 
   constructor(@Inject(ConfigService) private configService: ConfigService) {}
