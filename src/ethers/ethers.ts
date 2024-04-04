@@ -15,6 +15,7 @@ import {
 
 interface BlockEvent {
   blockNumber: number; 
+  isSynthetic: boolean;
 }
 
 enum ConnectionStatus { 
@@ -30,7 +31,7 @@ export class Ethers {
   private ethersWebsocketProvider: ethers.providers.WebSocketProvider;
   readonly logger = new Logger(Ethers.name);
   private newBlockSubject = new Subject<BlockEvent>(); // For emitting new block numbers
-  private blockNumberObservable: Observable<BlockEvent>; 
+  private lastBlockNumber: number;
 
   constructor(@Inject(ConfigService) private configService: ConfigService) {}
 
@@ -52,13 +53,30 @@ export class Ethers {
   
     blockObservable.subscribe({ 
       next: (blockEvent: BlockEvent) => {
-        this.logger.log(`New Block: ${blockEvent}`);
-        this.newBlockSubject.next(blockEvent);
+        this.handleBlockEvent(blockEvent);
       },
       error: (err) => {
         this.logger.error('Error in block observable:', err);
       }
     });
+  }
+
+  private handleBlockEvent(blockEvent: BlockEvent) {
+    const expectedBlockNumber = this.lastBlockNumber + 1;
+  
+    if (blockEvent.blockNumber > expectedBlockNumber) {
+      this.generateSyntheticBlocks(expectedBlockNumber, blockEvent.blockNumber);
+      this.logger.warn(`Missed blocks: Generated synthetic blocks from ${expectedBlockNumber} to ${blockEvent.blockNumber - 1}`);
+    }
+  
+    this.lastBlockNumber = blockEvent.blockNumber; 
+    this.newBlockSubject.next(blockEvent); 
+  }
+  
+  private generateSyntheticBlocks(start: number, end: number) {
+    for (let i = start; i < end; i++) {
+      this.newBlockSubject.next({ blockNumber: i, isSynthetic: true });  
+    }
   }
 
   async connectToWebsocketProvider(): Promise<ethers.providers.WebSocketProvider> {
