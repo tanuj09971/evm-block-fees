@@ -5,7 +5,6 @@ import { BlockAnalyticsModule } from './block-analytics/block-analytics.module';
 import { BlockCacheModule } from './block-cache/block-cache.module';
 import { BlockStatsModule } from './block-stats/block-stats.module';
 import { AppConfigModule } from './config/config.module';
-import { ethersProvider } from './providers/ethers.provider';
 import { Ethers } from './ethers/ethers';
 
 @Module({
@@ -26,6 +25,6 @@ import { Ethers } from './ethers/ethers';
     BlockStatsModule,
   ],
   controllers: [],
-  providers: [ethersProvider, Ethers],
+  providers: [Ethers],
 })
 export class AppModule {}

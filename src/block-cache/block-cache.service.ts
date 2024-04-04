@@ -14,13 +14,14 @@ import {
   ExponentialBackoffStrategy,
   Retryable,
 } from 'typescript-retry-decorator';
-import { ETHERS_PROVIDER, EthersProvider } from '../providers/ethers.provider';
 import { ethers } from 'ethers';
+import { Ethers } from 'src/ethers/ethers';
 
 @Injectable()
 export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   private blockCache: BlockWithTransactions[] = [];
-  private readonly MAX_CACHE_SIZE = 30; // TODO: Move this to global config
+  private readonly MAX_CACHE_SIZE =
+    this.configService.getOrThrow<number>('block_interval');
   private newBlockObservable = this.ethersProvider.getNewBlockObservable();
   private provider: ethers.providers.WebSocketProvider =
     this.ethersProvider.getProvider();
@@ -28,7 +29,7 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   private blockAppendedSubject = new Subject<BlockWithTransactions>();
 
   constructor(
-    @Inject(ETHERS_PROVIDER) private readonly ethersProvider: EthersProvider,
+    private readonly ethersProvider: Ethers,
     private readonly configService: ConfigService,
   ) {}
 
@@ -56,7 +57,6 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   })
   private async getLatestBlockNumber(): Promise<number> {
     try {
-      this.logger.log('TCL: BlockCacheService -> this.provider', this.provider);
       return await this.provider.getBlockNumber();
     } catch (e) {
       this.logger.error(`getLatestBlockNumber: ${e}`);
