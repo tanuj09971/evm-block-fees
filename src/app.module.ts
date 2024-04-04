@@ -6,6 +6,7 @@ import { BlockCacheModule } from './block-cache/block-cache.module';
 import { BlockStatsModule } from './block-stats/block-stats.module';
 import { AppConfigModule } from './config/config.module';
 import { ethersProvider } from './providers/ethers.provider';
+import { Ethers } from './ethers/ethers';
 
 @Module({
   imports: [
@@ -25,6 +26,6 @@ import { ethersProvider } from './providers/ethers.provider';
     BlockStatsModule,
   ],
   controllers: [],
-  providers: [ethersProvider.useFactory()],
+  providers: [ethersProvider, Ethers],
 })
 export class AppModule {}
