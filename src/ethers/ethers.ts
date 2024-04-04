@@ -17,35 +17,32 @@ interface BlockEvent {
   blockNumber: number; 
 }
 
-enum ProviderState { 
-  Initializing = 'initializing', 
-  Connected = 'connected', 
-  Error = 'error' 
+enum ConnectionStatus { 
+  Unknown = -1,
+  Connecting = 0,
+  Open = 1, 
+  Closing = 2,
+  Closed = 3
 }
-
 
 @Injectable()
 export class Ethers {
-  ethersWebsocketProvider: ethers.providers.WebSocketProvider;
+  private ethersWebsocketProvider: ethers.providers.WebSocketProvider;
   readonly logger = new Logger(Ethers.name);
   private newBlockSubject = new Subject<BlockEvent>(); // For emitting new block numbers
   private blockNumberObservable: Observable<BlockEvent>; 
-  private providerState = ProviderState.Initializing; 
 
   constructor(@Inject(ConfigService) private configService: ConfigService) {}
 
   async onModuleInit() {
     await this.initializeProvider();
-    await this.setOnBlockListener()
+    await this.setOnBlockListener();
   }
 
   private async initializeProvider() {
     try {
-      this.providerState = ProviderState.Initializing; 
       this.ethersWebsocketProvider = await this.connectToWebsocketProvider();
-      this.providerState = ProviderState.Connected;
     } catch (error) {
-      this.providerState = ProviderState.Error; 
       this.logger.error('Error initializing provider:', error);
     }
   }
@@ -86,8 +83,12 @@ export class Ethers {
     } catch (error) {
       this.logger.error(`establishWebsocketConnectionWithRetries: ${error}`);
       this.ethersWebsocketProvider?.destroy(); // Cleanup on error
-      throw error; // Propagate for decision making
+      throw error;
     }
+  }
+
+  getConnectionState(): ConnectionStatus { 
+    return this.ethersWebsocketProvider.websocket.readyState as ConnectionStatus; 
   }
 
   async disposeCurrentProvider() {
@@ -104,7 +105,7 @@ export class Ethers {
 
   //TODO: Think of a better name
   getWebsocketProvider(): ethers.providers.WebSocketProvider { 
-    if (this.providerState !== ProviderState.Connected) {
+    if (this.getConnectionState() === ConnectionStatus.Open) {
       throw new Error('Websocket provider not connected');
     }
     return this.ethersWebsocketProvider;
