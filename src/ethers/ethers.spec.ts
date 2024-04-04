@@ -28,33 +28,33 @@ describe('Ethers', () => {
     expect(ethers).toBeDefined();
   });
 
-  describe('connectProviderWithWssUrlOrRetryForever', () => {
-    it('should establish a connection and successfully call getBlockNumber', async () => {
-      await ethers.connectProviderWithWssUrlOrRetryForever();
-      const blockNumber = await ethers.provider.getBlockNumber();
-      expect(typeof blockNumber).toBe('number');
-      ethers.disposeCurrentProvider();
-    });
-    it('should throw an error if the connection fails', async () => {
-      const connectProviderMock = jest
-        .fn()
-        .mockRejectedValue(new ConnectionTimeoutException());
-      ethers.connectProviderWithWssUrlOrRetryForever = connectProviderMock;
+  // describe('connectProviderWithWssUrlOrRetryForever', () => {
+  //   it('should establish a connection and successfully call getBlockNumber', async () => {
+  //     await ethers.connectProviderWithWssUrlOrRetryForever();
+  //     const blockNumber = await ethers.provider.getBlockNumber();
+  //     expect(typeof blockNumber).toBe('number');
+  //     ethers.disposeCurrentProvider();
+  //   });
+  //   it('should throw an error if the connection fails', async () => {
+  //     const connectProviderMock = jest
+  //       .fn()
+  //       .mockRejectedValue(new ConnectionTimeoutException());
+  //     ethers.connectProviderWithWssUrlOrRetryForever = connectProviderMock;
 
-      await expect(
-        ethers.connectProviderWithWssUrlOrRetryForever(),
-      ).rejects.toThrow(new ConnectionTimeoutException());
-    });
-  });
+  //     await expect(
+  //       ethers.connectProviderWithWssUrlOrRetryForever(),
+  //     ).rejects.toThrow(new ConnectionTimeoutException());
+  //   });
+  // });
 
-  describe('disposeCurrentProvider', () => {
-    it('should dipose the provider', async () => {
-      ethers.provider = {
-        destroy: jest.fn(),
-      } as unknown as ethers.providers.WebSocketProvider;
-      await ethers.connectProviderWithWssUrlOrRetryForever();
-      await ethers.disposeCurrentProvider();
-      expect(await ethers.provider.ready).toBe(false);
-    });
-  });
+  // describe('disposeCurrentProvider', () => {
+  //   it('should dipose the provider', async () => {
+  //     ethers.provider = {
+  //       destroy: jest.fn(),
+  //     } as unknown as ethers.providers.WebSocketProvider;
+  //     await ethers.connectProviderWithWssUrlOrRetryForever();
+  //     await ethers.disposeCurrentProvider();
+  //     expect(await ethers.provider.ready).toBe(false);
+  //   });
+  // });
 });

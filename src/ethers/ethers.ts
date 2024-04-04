@@ -6,43 +6,67 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
-import { Observable, Subject } from 'rxjs';
+import { fromEvent, Observable, Subject } from 'rxjs';
 import {
   BackOffPolicy,
   ExponentialBackoffStrategy,
   Retryable,
 } from 'typescript-retry-decorator';
 
+interface BlockEvent {
+  blockNumber: number; 
+}
+
+enum ProviderState { 
+  Initializing = 'initializing', 
+  Connected = 'connected', 
+  Error = 'error' 
+}
+
+
 @Injectable()
 export class Ethers {
-  provider: ethers.providers.WebSocketProvider;
+  ethersWebsocketProvider: ethers.providers.WebSocketProvider;
   readonly logger = new Logger(Ethers.name);
-  private newBlockSubject = new Subject<number>(); // For emitting new block numbers
+  private newBlockSubject = new Subject<BlockEvent>(); // For emitting new block numbers
+  private blockNumberObservable: Observable<BlockEvent>; 
+  private providerState = ProviderState.Initializing; 
 
   constructor(@Inject(ConfigService) private configService: ConfigService) {}
 
   async onModuleInit() {
-    await this.connectProviderWithWssUrlOrRetryForever();
-    await this.setProviderListners();
+    await this.initializeProvider();
+    await this.setOnBlockListener()
   }
 
-  async setProviderListners() {
-    await this.setOnErrorListner();
-    await this.setOnBlockListner();
+  private async initializeProvider() {
+    try {
+      this.providerState = ProviderState.Initializing; 
+      this.ethersWebsocketProvider = await this.connectToWebsocketProvider();
+      this.providerState = ProviderState.Connected;
+    } catch (error) {
+      this.providerState = ProviderState.Error; 
+      this.logger.error('Error initializing provider:', error);
+    }
   }
 
-  //TODO: reinitialize if error
-  async setOnErrorListner() {
-    this.provider.on('error', (err) => {
-      this.logger.error('WebSocket Provider Error:', err);
+  async setOnBlockListener() {
+    const blockObservable = fromEvent(this.ethersWebsocketProvider, 'block');
+  
+    blockObservable.subscribe({ 
+      next: (blockEvent: BlockEvent) => {
+        this.logger.log(`New Block: ${blockEvent}`);
+        this.newBlockSubject.next(blockEvent);
+      },
+      error: (err) => {
+        this.logger.error('Error in block observable:', err);
+      }
     });
   }
 
-  async setOnBlockListner() {
-    this.provider.on('block', (blockNumber) => {
-      this.logger.log(`New Block: ${blockNumber}`);
-      this.newBlockSubject.next(blockNumber);
-    });
+  async connectToWebsocketProvider(): Promise<ethers.providers.WebSocketProvider> {
+    const wssUrl = this.configService.getOrThrow<string>('WSS_WEB3_URL');
+    return await this.establishWebsocketConnectionWithRetries(wssUrl);
   }
 
   @Retryable({
@@ -55,17 +79,23 @@ export class Ethers {
       backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
     },
   })
-  async connectProviderWithWssUrlOrRetryForever() {
-    const wssUrl = this.configService.getOrThrow<string>('WSS_WEB3_URL');
-    this.provider = new ethers.providers.WebSocketProvider(wssUrl);
+  private async establishWebsocketConnectionWithRetries(wssUrl: string): Promise<ethers.providers.WebSocketProvider> {
+    try {
+      const provider = new ethers.providers.WebSocketProvider(wssUrl);
+      return provider; 
+    } catch (error) {
+      this.logger.error(`establishWebsocketConnectionWithRetries: ${error}`);
+      this.ethersWebsocketProvider?.destroy(); // Cleanup on error
+      throw error; // Propagate for decision making
+    }
   }
 
   async disposeCurrentProvider() {
-    await this.provider.destroy();
+    await this.ethersWebsocketProvider.destroy();
   }
 
   async onModuleDestroy() {
-    if (this.provider) {
+    if (this.ethersWebsocketProvider) {
       await this.disposeCurrentProvider();
     }
     this.newBlockSubject.unsubscribe();
@@ -73,11 +103,13 @@ export class Ethers {
   }
 
   //TODO: Think of a better name
-  getProvider(): ethers.providers.WebSocketProvider {
-    return this.provider;
+  getWebsocketProvider(): ethers.providers.WebSocketProvider { 
+    if (this.providerState !== ProviderState.Connected) {
+      throw new Error('Websocket provider not connected');
+    }
+    return this.ethersWebsocketProvider;
   }
-
-  getNewBlockObservable(): Observable<number> {
+  getNewBlockObservable(): Observable<BlockEvent> {
     return this.newBlockSubject.asObservable();
   }
 }
