@@ -27,10 +27,10 @@ describe('Ethers', () => {
     expect(provider).toBeDefined();
   });
 
-  describe('initiateProviderWithWssUrl', () => {
+  describe('connectProviderWithWssUrlOrRetryForever', () => {
     it('should call the method', async () => {
-      const initiateSpy = jest.spyOn(provider, 'initiateProviderWithWssUrl');
-      await provider.initiateProviderWithWssUrl();
+      const initiateSpy = jest.spyOn(provider, 'connectProviderWithWssUrlOrRetryForever');
+      await provider.connectProviderWithWssUrlOrRetryForever();
 
       expect(initiateSpy).toHaveBeenCalled();
       expect(configServiceMock.getOrThrow).toHaveBeenCalledWith(
@@ -42,8 +42,8 @@ describe('Ethers', () => {
 
   describe('disposeCurrentProvider', () => {
     it('should call the method and log the URL', async () => {
-      const initiateSpy = jest.spyOn(provider, 'initiateProviderWithWssUrl');
-      await provider.initiateProviderWithWssUrl();
+      const initiateSpy = jest.spyOn(provider, 'connectProviderWithWssUrlOrRetryForever');
+      await provider.connectProviderWithWssUrlOrRetryForever();
 
       expect(initiateSpy).toHaveBeenCalled();
       expect(configServiceMock.getOrThrow).toHaveBeenCalledWith(
@@ -61,7 +61,7 @@ describe('Ethers', () => {
 
       ethersProvider = await provider.getProvider();
 
-      await provider.initiateProviderWithWssUrl();
+      await provider.connectProviderWithWssUrlOrRetryForever();
       await provider.setOnErrorListner();
       await provider.disposeCurrentProvider();
     });
@@ -75,7 +75,7 @@ describe('Ethers', () => {
 
       ethersProvider = await provider.getProvider();
 
-      await provider.initiateProviderWithWssUrl();
+      await provider.connectProviderWithWssUrlOrRetryForever();
       await provider.setOnBlockListner();
 
       await provider.disposeCurrentProvider();
