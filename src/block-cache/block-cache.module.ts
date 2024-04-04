@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ethersProvider } from '../providers/ethers.provider';
+import { ConfigModule } from '@nestjs/config';
+import { BlockCacheService } from './block-cache.service';
 
 @Module({
-    providers: [ethersProvider]
+  providers: [BlockCacheService, ConfigModule],
 })
 export class BlockCacheModule {}

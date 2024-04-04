@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  web3-proxy:
+    container_name: web3-proxy
+    image: tanuj09971/web3-proxy
+    ports:
+      - '8544:8544'
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          "apt-get update && apt-get install -y curl && curl -f http://web3-proxy:8544/health && exit 0 || exit 1",
+        ]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 5s
+    networks:
+      - evm-block-network
+
+  evm-block-fees:
+    container_name: evm-block-fees
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    restart: unless-stopped
+    depends_on:
+      web3-proxy:
+        condition: service_healthy
+    networks:
+      - evm-block-network
+
+networks:
+  evm-block-network:
+    name: evm-block-network
+    driver: bridge

@@ -1,0 +1,25 @@
+# Ignore Dockerfile-specific files and directories
+Dockerfile*
+docker-compose*
+
+# Ignore system and hidden files
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+*.swp
+
+# Ignore node_modules directory for Node.js applications
+node_modules
+
+# Ignore package-lock.json or yarn.lock for Node.js applications
+package-lock.json
+yarn.lock
+
+# Ignore any temporary files or build artifacts
+*.log
+*.tmp
+*.bak
+*.cache
+*.pid

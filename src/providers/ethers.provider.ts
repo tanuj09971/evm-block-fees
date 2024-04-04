@@ -1,7 +1,14 @@
-import { FactoryProvider, OnModuleInit, OnModuleDestroy, Inject, Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config'; 
+import {
+  FactoryProvider,
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
-import { fromEvent, Observable, Subject } from 'rxjs'; 
+import { Observable, Subject } from 'rxjs';
 
 export const ETHERS_PROVIDER = 'ETHERS_PROVIDER';
 
@@ -14,33 +21,38 @@ export class EthersProvider implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject(ConfigService) private configService: ConfigService) {}
 
   async onModuleInit() {
-    await this.initiateProviderWithWssUrl()
-    await this.setProviderListners()
+    await this.initiateProviderWithWssUrl();
+    await this.setProviderListners();
   }
 
   async setProviderListners() {
-    await this.setOnErrorListner()
-    await this.setOnBlockListner()
+    await this.setOnErrorListner();
+    await this.setOnBlockListner();
   }
 
+  //TODO: reinitialize if error
   async setOnErrorListner() {
-    this.provider.on("error", (err) => {
-        this.logger.error('WebSocket Provider Error:', err);
+    this.provider.on('error', (err) => {
+      this.logger.error('WebSocket Provider Error:', err);
     });
   }
 
   async setOnBlockListner() {
     this.provider.on('block', (blockNumber) => {
-        this.logger.log(`New Block: ${blockNumber}`); 
-        this.newBlockSubject.next(blockNumber);
+      this.logger.log(`New Block: ${blockNumber}`);
+      this.newBlockSubject.next(blockNumber);
     });
   }
 
   async initiateProviderWithWssUrl() {
-    const wssUrl = this.configService.get<string>('WEB3_WSS_URL');
+    const wssUrl = this.configService.get<string>('ws_or_wss_web3_url');
+    this.logger.log(
+      'TCL: EthersProvider -> initiateProviderWithWssUrl -> wssUrl',
+      wssUrl,
+    );
 
     if (!wssUrl) {
-      throw new Error('WEB3_WSS_URL not found in environment');
+      throw new Error('ws_or_wss_web3_url not found in the config');
     }
     this.provider = new ethers.providers.WebSocketProvider(wssUrl);
   }
@@ -51,8 +63,9 @@ export class EthersProvider implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     if (this.provider) {
-      await this.disposeCurrentProvider()
+      await this.disposeCurrentProvider();
     }
+    this.newBlockSubject.unsubscribe();
   }
 
   //TODO: Think of a better name
@@ -67,6 +80,6 @@ export class EthersProvider implements OnModuleInit, OnModuleDestroy {
 
 export const ethersProvider: FactoryProvider = {
   provide: ETHERS_PROVIDER,
-  useFactory: (ethersProvider: EthersProvider) => ethersProvider.getProvider(), 
+  useFactory: (ethersProvider: EthersProvider) => ethersProvider.getProvider(),
   inject: [EthersProvider],
 };
