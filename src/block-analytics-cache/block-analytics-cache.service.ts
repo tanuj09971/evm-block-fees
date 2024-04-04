@@ -1,8 +1,8 @@
 import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { BigNumber } from 'ethers';
+import { BlockCacheService } from 'src/block-cache/block-cache.service';
 import { BlockStatsService } from 'src/block-stats/block-stats.service';
-import { BlockCacheService } from '../block-cache/block-cache.service';
 
 interface BlockStat {
   // Define the structure of your block statistics
@@ -12,7 +12,7 @@ interface BlockStat {
 }
 
 @Injectable()
-export class BlockAnalyticsService implements OnModuleInit {
+export class BlockAnalyticsCacheService implements OnModuleInit {
   private statsCache: Map<number, BlockStat> = new Map(); // Key: number of blocks, Value: stats
   private readonly statsForNBlocks = [1, 5, 30];
 
