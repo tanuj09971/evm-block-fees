@@ -1,21 +1,20 @@
 import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import {
   BadRequestException,
-  Inject,
   Injectable,
   Logger,
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ethers } from 'ethers';
 import { Observable, Subject } from 'rxjs';
+import { Ethers } from 'src/ethers/ethers';
 import {
   BackOffPolicy,
   ExponentialBackoffStrategy,
   Retryable,
 } from 'typescript-retry-decorator';
-import { ethers } from 'ethers';
-import { Ethers } from 'src/ethers/ethers';
 
 @Injectable()
 export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
@@ -102,6 +101,9 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async appendBlockToCache(blockNumber: number) {
+    if (!this.isBlockNumberSequential(blockNumber)) {
+      throw new Error('Unexpected block number sequence');
+    }
     const newBlock: BlockWithTransactions =
       await this.getBlockWithTransactions(blockNumber);
     this.blockCache.push(newBlock);
@@ -125,6 +127,8 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
 
   getLatestBlock(): BlockWithTransactions {
     // access the last item pused into cache array
+    if (this.blockCache.length == 0)
+      throw new Error('No blocks found in cache');
     return this.blockCache[-1];
   }
 
@@ -145,5 +149,13 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
 
     const validBlockInterval = currentTimestamp - blockInterval;
     return validBlockInterval < latestBlockTimestamp;
+  }
+
+  private isBlockNumberSequential(blockNumber: number): boolean {
+    const lastCachedBlockNumber = this.getLatestBlock().number;
+    return (
+      lastCachedBlockNumber !== null &&
+      blockNumber === lastCachedBlockNumber + 1
+    );
   }
 }
