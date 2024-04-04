@@ -8,7 +8,7 @@ describe('EthersProvider', () => {
   let configServiceMock: ConfigService;
 
   beforeEach(async () => {
-    configServiceMock = { get: { mockReturnValue: jest.fn() } } as any;
+    configServiceMock = { getOrThrow: { mockReturnValue: jest.fn() } } as any;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -20,7 +20,7 @@ describe('EthersProvider', () => {
     provider = module.get<EthersProvider>(EthersProvider);
     const mockUrl =
       'wss://sepolia.infura.io/v3/4e65725048f74194b9f4079e23a8a964';
-    configServiceMock.get = jest.fn().mockReturnValue(mockUrl);
+    configServiceMock.getOrThrow = jest.fn().mockReturnValue(mockUrl);
   });
 
   it('should be defined', () => {

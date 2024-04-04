@@ -25,6 +25,6 @@ import { ethersProvider } from './providers/ethers.provider';
     BlockStatsModule,
   ],
   controllers: [],
-  providers: [ethersProvider],
+  providers: [ethersProvider.useFactory()],
 })
 export class AppModule {}
