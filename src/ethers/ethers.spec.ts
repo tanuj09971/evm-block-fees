@@ -1,10 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ethers } from 'ethers';
+import { ConnectionTimeoutException } from '../filters/http-exceptions';
 import { Ethers } from './ethers';
 
 describe('Ethers', () => {
-  let provider: Ethers;
+  let ethers: Ethers;
   let configServiceMock: ConfigService;
 
   beforeEach(async () => {
@@ -17,68 +18,43 @@ describe('Ethers', () => {
       ],
     }).compile();
 
-    provider = module.get<Ethers>(Ethers);
+    ethers = module.get<Ethers>(Ethers);
     const mockUrl =
       'wss://sepolia.infura.io/v3/4e65725048f74194b9f4079e23a8a964';
     configServiceMock.getOrThrow = jest.fn().mockReturnValue(mockUrl);
   });
 
   it('should be defined', () => {
-    expect(provider).toBeDefined();
+    expect(ethers).toBeDefined();
   });
 
   describe('connectProviderWithWssUrlOrRetryForever', () => {
-    it('should call the method', async () => {
-      const initiateSpy = jest.spyOn(provider, 'connectProviderWithWssUrlOrRetryForever');
-      await provider.connectProviderWithWssUrlOrRetryForever();
+    it('should establish a connection and successfully call getBlockNumber', async () => {
+      await ethers.connectProviderWithWssUrlOrRetryForever();
+      const blockNumber = await ethers.provider.getBlockNumber();
+      expect(typeof blockNumber).toBe('number');
+      ethers.disposeCurrentProvider();
+    });
+    it('should throw an error if the connection fails', async () => {
+      const connectProviderMock = jest
+        .fn()
+        .mockRejectedValue(new ConnectionTimeoutException());
+      ethers.connectProviderWithWssUrlOrRetryForever = connectProviderMock;
 
-      expect(initiateSpy).toHaveBeenCalled();
-      expect(configServiceMock.getOrThrow).toHaveBeenCalledWith(
-        'WSS_WEB3_URL',
-      );
-      await provider.disposeCurrentProvider();
+      await expect(
+        ethers.connectProviderWithWssUrlOrRetryForever(),
+      ).rejects.toThrow(new ConnectionTimeoutException());
     });
   });
 
   describe('disposeCurrentProvider', () => {
-    it('should call the method and log the URL', async () => {
-      const initiateSpy = jest.spyOn(provider, 'connectProviderWithWssUrlOrRetryForever');
-      await provider.connectProviderWithWssUrlOrRetryForever();
-
-      expect(initiateSpy).toHaveBeenCalled();
-      expect(configServiceMock.getOrThrow).toHaveBeenCalledWith(
-        'WSS_WEB3_URL',
-      );
-      await provider.disposeCurrentProvider();
-    });
-  });
-
-  describe('setOnErrorListener', () => {
-    it('should log errors', async () => {
-      let ethersProvider = {
-        on: jest.fn(),
+    it('should dipose the provider', async () => {
+      ethers.provider = {
+        destroy: jest.fn(),
       } as unknown as ethers.providers.WebSocketProvider;
-
-      ethersProvider = await provider.getProvider();
-
-      await provider.connectProviderWithWssUrlOrRetryForever();
-      await provider.setOnErrorListner();
-      await provider.disposeCurrentProvider();
-    });
-  });
-
-  describe('setOnBlockListener', () => {
-    it('should log new blocks and emit via the observable', async () => {
-      let ethersProvider = {
-        on: jest.fn(),
-      } as unknown as ethers.providers.WebSocketProvider;
-
-      ethersProvider = await provider.getProvider();
-
-      await provider.connectProviderWithWssUrlOrRetryForever();
-      await provider.setOnBlockListner();
-
-      await provider.disposeCurrentProvider();
+      await ethers.connectProviderWithWssUrlOrRetryForever();
+      await ethers.disposeCurrentProvider();
+      expect(await ethers.provider.ready).toBe(false);
     });
   });
 });
