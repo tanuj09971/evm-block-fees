@@ -45,15 +45,7 @@ export class EthersProvider implements OnModuleInit, OnModuleDestroy {
   }
 
   async initiateProviderWithWssUrl() {
-    const wssUrl = this.configService.get<string>('ws_or_wss_web3_url');
-    this.logger.log(
-      'TCL: EthersProvider -> initiateProviderWithWssUrl -> wssUrl',
-      wssUrl,
-    );
-
-    if (!wssUrl) {
-      throw new Error('ws_or_wss_web3_url not found in the config');
-    }
+    const wssUrl = this.configService.getOrThrow<string>('WSS_WEB3_URL');
     this.provider = new ethers.providers.WebSocketProvider(wssUrl);
   }
 
