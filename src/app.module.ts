@@ -6,10 +6,12 @@ import { BlockStatsModule } from './block-stats/block-stats.module';
 import { AppConfigModule } from './config/config.module';
 import { Ethers } from './ethers/ethers';
 import { BlockAnalyticsCacheModule } from './block-analytics-cache/block-analytics-cache.module';
+import { EthersModule } from './ethers/ethers.module';
 
 @Module({
   imports: [
     AppConfigModule,
+    EthersModule,
     ThrottlerModule.forRoot([
       {
         ttl: 1000,
@@ -25,6 +27,6 @@ import { BlockAnalyticsCacheModule } from './block-analytics-cache/block-analyti
     BlockAnalyticsCacheModule,
   ],
   controllers: [],
-  providers: [Ethers],
+  providers: [],
 })
 export class AppModule {}
