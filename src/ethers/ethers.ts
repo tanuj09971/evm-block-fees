@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
-import { Observable, Subject, fromEvent } from 'rxjs';
+import {
+  Observable,
+  Subject,
+  distinctUntilChanged,
+  fromEvent,
+  map,
+} from 'rxjs';
 import {
   BackOffPolicy,
   ExponentialBackoffStrategy,
@@ -30,20 +36,25 @@ export class Ethers {
 
   async onModuleInit() {
     await this.initializeProvider();
-    this.lastBlockNumber = await this.getLatestBlockNumber();
     await this.setOnBlockListener();
   }
 
   private async initializeProvider() {
     try {
       this.ethersWebsocketProvider = await this.connectToWebsocketProvider();
+      this.logger.debug('WebSocket provider initialized successfully');
+      // Get initial block number for state management
+      this.lastBlockNumber = await this.getLatestBlockNumber();
     } catch (error) {
       this.logger.error('Error initializing provider:', error);
+      throw error; // Ensure the error propagates for handling
     }
   }
 
-  /*
-  const blockObservable = fromEvent(
+  async setOnBlockListener() {
+    // const blockObservable = fromEvent(this.ethersWebsocketProvider, 'block');
+
+    const blockObservable = fromEvent(
       this.ethersWebsocketProvider,
       'block',
     ).pipe(
@@ -53,29 +64,14 @@ export class Ethers {
 
     blockObservable.subscribe({
       next: async (blockEvent: BlockEvent) => {
-        this.lastBlockNumber = blockEvent.blockNumber; // Update lastBlockNumber
-        await this.handleBlockEvent(blockEvent);
-      },
-      error: (err) => {
-        this.logger.error('Error in block observable:', err);
-      },
-    }); */
-  async setOnBlockListener() {
-    const blockObservable = fromEvent(this.ethersWebsocketProvider, 'block');
-
-    blockObservable.subscribe({
-      next: async (blockNumber: number) => {
-        if (this.lastBlockNumber !== blockNumber) {
-          // Check for difference
-          this.lastBlockNumber = blockNumber; // Update only if different
-
-          const blockEvent: BlockEvent = {
-            blockNumber,
-            isSynthetic: false,
-          };
+        if (this.lastBlockNumber !== blockEvent.blockNumber) {
+          this.logger.debug(`New block received: ${blockEvent.blockNumber}`);
+          this.lastBlockNumber = blockEvent.blockNumber; // Update lastBlockNumber
           await this.handleBlockEvent(blockEvent);
         } else {
-          this.logger.debug(`Skipping duplicate block number: ${blockNumber}`); // Optional log
+          this.logger.debug(
+            `Skipping duplicate block number: ${blockEvent.blockNumber}`,
+          );
         }
       },
       error: (err) => {
@@ -171,7 +167,8 @@ export class Ethers {
   })
   async getLatestBlockNumber(): Promise<number> {
     try {
-      return await this.ethersWebsocketProvider.getBlockNumber();
+      const blockNumber = await this.ethersWebsocketProvider.getBlockNumber();
+      return blockNumber;
     } catch (e) {
       this.logger.error(`getLatestBlockNumber: ${e}`);
       throw e;
@@ -201,7 +198,7 @@ export class Ethers {
     }
   }
 
-  //TODO: Think of a better name
+  //TODO: name this as getProvider as ethers.getProvider makes more sense and provide more abstraction
   getWebsocketProvider(): ethers.providers.WebSocketProvider {
     if (this.getConnectionState() === ConnectionStatus.Open) {
       throw new Error('Websocket provider not connected');
@@ -209,6 +206,8 @@ export class Ethers {
     return this.ethersWebsocketProvider;
   }
   getNewBlockObservable(): Observable<BlockWithTransactions> {
-    return this.newBlockSubject.asObservable();
+    return this.newBlockSubject.asObservable().pipe(
+      distinctUntilChanged(), // Filter duplicates
+    );
   }
 }

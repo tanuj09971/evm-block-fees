@@ -11,9 +11,8 @@ export class BlockStatsService {
   private logger: Logger = new Logger(BlockStatsService.name);
   constructor() {}
 
-  calculateStats(blocks: BlockWithTransactions[]): BlockStat {
+  async calculateStats(blocks: BlockWithTransactions[]): Promise<BlockStat> {
     const blockFeeData = this.calculateBlockEthTransactionTotalFeeData(blocks);
-    this.logger.debug(`Calculated block fee data: ${blockFeeData}`);
     // 1. Average native ETH transfer fees calculation
     const avgNativeEthTransferFee =
       this.calculateAverageNativeEthTransferFee(blockFeeData);
@@ -26,9 +25,10 @@ export class BlockStatsService {
     // const averageBlockFullness = this.calculateAverageBlockFullness(blocks);
 
     return {
-      avgNativeEthTransferFee,
+      avgNativeEthTransferFee: avgNativeEthTransferFee.toString(),
       fromBlockNumber: blocksRange.from,
       toBlockNumber: blocksRange.to,
+      totalBlocks: blocksRange.total,
       // optimalFee,
       // mempoolSize: 0, // Omit for now
       // blockFullness: averageBlockFullness,
@@ -61,7 +61,8 @@ export class BlockStatsService {
   private getBlockRange(blocks: BlockWithTransactions[]): Range {
     const startBlock = blocks[0]?.number;
     const lastBlock = blocks[blocks.length - 1]?.number;
-    return { from: startBlock, to: lastBlock };
+    const numberOfBlocks = lastBlock - startBlock + 1;
+    return { from: startBlock, to: lastBlock, total: numberOfBlocks };
   }
 
   // Calculate average priority fee across transactions

@@ -6,7 +6,7 @@ export interface BlockEvent {
 }
 
 export interface BlockStat {
-  avgNativeEthTransferFee: BigNumber;
+  avgNativeEthTransferFee: string;
   // lastBlockEthTransferFee:BigNumber;
   // last5BlocksEthTransferFee:BigNumber;
   // last30BlocksEthTransferFee:BigNumber;
@@ -17,6 +17,7 @@ export interface BlockStat {
   blockFullness?: BigNumber; // (0 - 100 representing percentage full)
   fromBlockNumber: number;
   toBlockNumber: number;
+  totalBlocks: number;
 }
 
 export interface BlockFeeData {
@@ -27,4 +28,5 @@ export interface BlockFeeData {
 export interface Range {
   from: number;
   to: number;
+  total: number;
 }
