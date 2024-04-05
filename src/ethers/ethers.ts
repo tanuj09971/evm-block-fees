@@ -75,7 +75,7 @@ export class Ethers {
           };
           await this.handleBlockEvent(blockEvent);
         } else {
-          console.log(`Skipping duplicate block number: ${blockNumber}`); // Optional log
+          this.logger.debug(`Skipping duplicate block number: ${blockNumber}`); // Optional log
         }
       },
       error: (err) => {

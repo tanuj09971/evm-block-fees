@@ -1,11 +1,11 @@
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { BlockAnalyticsCacheModule } from './block-analytics-cache/block-analytics-cache.module';
 import { BlockCacheModule } from './block-cache/block-cache.module';
+import { BlockFeesModule } from './block-fees/block-fees.module';
 import { BlockStatsModule } from './block-stats/block-stats.module';
 import { AppConfigModule } from './config/config.module';
-import { Ethers } from './ethers/ethers';
-import { BlockAnalyticsCacheModule } from './block-analytics-cache/block-analytics-cache.module';
 import { EthersModule } from './ethers/ethers.module';
 
 @Module({
@@ -25,6 +25,7 @@ import { EthersModule } from './ethers/ethers.module';
     BlockCacheModule,
     BlockStatsModule,
     BlockAnalyticsCacheModule,
+    BlockFeesModule,
   ],
   controllers: [],
   providers: [],

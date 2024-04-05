@@ -4,13 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { BigNumber } from 'ethers';
 import { BlockCacheService } from 'src/block-cache/block-cache.service';
 import { BlockStatsService } from 'src/block-stats/block-stats.service';
-
-interface BlockStat {
-  // Define the structure of your block statistics
-  // Example:
-  avgNativeEthTransferFee: BigNumber;
-  // ... other stats
-}
+import { BlockStat } from 'src/types/ethers';
 
 @Injectable()
 export class BlockAnalyticsCacheService implements OnModuleInit {
@@ -25,7 +19,8 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
   ) {
     this.MAX_CACHE_SIZE =
       this.configService.getOrThrow<number>('max_cache_size');
-    this.statsForNBlocks = this.configService.getOrThrow<Array<number>>('block_range')
+    this.statsForNBlocks =
+      this.configService.getOrThrow<Array<number>>('block_range');
   }
 
   async onModuleInit() {
@@ -36,11 +31,8 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
       });
   }
 
-  getStateForLatestNBlocks(n: number) {
-    if (n > this.MAX_CACHE_SIZE) {
-      throw new Error('Invalid block range');
-    }
-    return this.statsCache.get(n);
+  getStatsForLatestNBlocks(n: number): BlockStat {
+    return this.statsCache.get(n) as BlockStat;
   }
 
   private updateStatsCache(): void {

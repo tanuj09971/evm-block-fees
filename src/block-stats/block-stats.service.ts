@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   BlockWithTransactions,
   TransactionResponse,
@@ -8,11 +8,12 @@ import { BlockFeeData, BlockStat, Range } from 'src/types/ethers';
 
 @Injectable()
 export class BlockStatsService {
+  private logger: Logger = new Logger(BlockStatsService.name);
   constructor() {}
 
   calculateStats(blocks: BlockWithTransactions[]): BlockStat {
     const blockFeeData = this.calculateBlockEthTransactionTotalFeeData(blocks);
-
+    this.logger.debug(`Calculated block fee data: ${blockFeeData}`);
     // 1. Average native ETH transfer fees calculation
     const avgNativeEthTransferFee =
       this.calculateAverageNativeEthTransferFee(blockFeeData);
@@ -41,6 +42,7 @@ export class BlockStatsService {
     return transactions.filter((tx) => !!tx.value); // Assuming 'value' indicates ETH transfer
   }
 
+  // Calculate total fees per block
   private calculateBlockEthTransactionTotalFeeData(
     blocks: BlockWithTransactions[],
   ): BlockFeeData[] {
@@ -62,6 +64,7 @@ export class BlockStatsService {
     return { from: startBlock, to: lastBlock };
   }
 
+  // Calculate average priority fee across transactions
   private calculateAverageMaxPriorityFee(
     transactions: TransactionResponse[],
   ): BigNumber {
@@ -83,6 +86,7 @@ export class BlockStatsService {
     return totalMaxPriorityFees.div(txCount);
   }
 
+  // Calculate average native ETH transfer fee across blocks
   private calculateAverageNativeEthTransferFee(
     blocks: BlockFeeData[],
   ): BigNumber {

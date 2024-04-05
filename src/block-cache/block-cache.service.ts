@@ -35,9 +35,8 @@ export class BlockCacheService implements OnModuleInit {
     await this.backfillCache();
     this.newBlockObservable.subscribe(
       async (blockWithTransactions: BlockWithTransactions) => {
-        console.log(
-          'TCL: BlockCacheService -> onModuleInit -> blockWithTransactions',
-          blockWithTransactions.number,
+        this.logger.debug(
+          `Received new block: ${blockWithTransactions.number}`,
         );
         this.enforceCacheLimit();
         await this.appendBlockToCache(blockWithTransactions);
@@ -50,7 +49,10 @@ export class BlockCacheService implements OnModuleInit {
   }
 
   private async backfillCache() {
-    if (this.isBlockNumberSequential(this.latestBlockNumber)) return;
+    if (!this.isBlockNumberSequential(this.latestBlockNumber)) {
+      this.logger.debug('Cache is already initialized, skipping backfill');
+      return;
+    }
     this.latestBlockNumber = await this.ethersProvider.getLatestBlockNumber();
     const startingBlock = Math.max(
       this.latestBlockNumber - this.MAX_CACHE_SIZE + 1,
@@ -123,6 +125,9 @@ export class BlockCacheService implements OnModuleInit {
     if (this.blockCache && this.blockCache.length == 0) return true; //when the cache is empty return true
 
     const lastCachedBlockNumber = this.getLatestBlockFromCache().number;
-    return blockNumber === lastCachedBlockNumber + 1;
+    return (
+      blockNumber === lastCachedBlockNumber + 1 ||
+      blockNumber === lastCachedBlockNumber
+    );
   }
 }

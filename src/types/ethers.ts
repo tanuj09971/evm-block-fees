@@ -7,6 +7,10 @@ export interface BlockEvent {
 
 export interface BlockStat {
   avgNativeEthTransferFee: BigNumber;
+  // lastBlockEthTransferFee:BigNumber;
+  // last5BlocksEthTransferFee:BigNumber;
+  // last30BlocksEthTransferFee:BigNumber;
+
   optimalFee?: BigNumber; // Placeholder for future implementation
   // Difficulty to estimate mempool size accurately; omit for now
   // mempoolSize: BigNumber,
