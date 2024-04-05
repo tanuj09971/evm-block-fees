@@ -3,112 +3,80 @@ import {
   BadRequestException,
   Injectable,
   Logger,
-  OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
 import { Observable, Subject } from 'rxjs';
 import { Ethers } from 'src/ethers/ethers';
-import {
-  BackOffPolicy,
-  ExponentialBackoffStrategy,
-  Retryable,
-} from 'typescript-retry-decorator';
 
 @Injectable()
-export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
+export class BlockCacheService implements OnModuleInit {
   private blockCache: BlockWithTransactions[] = [];
-  private readonly MAX_CACHE_SIZE =
-    this.configService.getOrThrow<number>('block_interval');
-  private newBlockObservable = this.ethersProvider.getNewBlockObservable();
-  private provider: ethers.providers.WebSocketProvider =
-    this.ethersProvider.getProvider();
+  private readonly MAX_CACHE_SIZE;
+  private newBlockObservable: Observable<BlockWithTransactions>;
+  private provider: ethers.providers.WebSocketProvider;
   private readonly logger = new Logger(BlockCacheService.name);
   private blockAppendedSubject = new Subject<BlockWithTransactions>();
+  private latestBlockNumber: number;
+  private latestBlockWithTransactions: BlockWithTransactions;
 
   constructor(
     private readonly ethersProvider: Ethers,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.MAX_CACHE_SIZE =
+      this.configService.getOrThrow<number>('max_cache_size');
+    this.newBlockObservable = this.ethersProvider.getNewBlockObservable();
+    this.provider = this.ethersProvider.getWebsocketProvider();
+  }
 
   async onModuleInit() {
     await this.backfillCache();
-    this.newBlockObservable.subscribe(async (blockNumber) => {
-      await this.appendBlockToCache(blockNumber);
-      this.enforceCacheLimit();
-    });
+    this.newBlockObservable.subscribe(
+      async (blockWithTransactions: BlockWithTransactions) => {
+        console.log(
+          'TCL: BlockCacheService -> onModuleInit -> blockWithTransactions',
+          blockWithTransactions.number,
+        );
+        this.enforceCacheLimit();
+        await this.appendBlockToCache(blockWithTransactions);
+      },
+    );
   }
 
   async onModuleDestroy() {
     this.blockAppendedSubject.unsubscribe();
   }
 
-  @Retryable({
-    maxAttempts: Number.MAX_VALUE,
-    backOffPolicy: BackOffPolicy.ExponentialBackOffPolicy,
-    backOff: 1000,
-    exponentialOption: {
-      maxInterval: 4000,
-      multiplier: 2,
-      backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
-    },
-  })
-  private async getLatestBlockNumber(): Promise<number> {
-    try {
-      return await this.provider.getBlockNumber();
-    } catch (e) {
-      this.logger.error(`getLatestBlockNumber: ${e}`);
-      throw e;
-    }
-  }
-
-  @Retryable({
-    maxAttempts: Number.MAX_VALUE,
-    backOffPolicy: BackOffPolicy.ExponentialBackOffPolicy,
-    backOff: 1000,
-    exponentialOption: {
-      maxInterval: 4000,
-      multiplier: 2,
-      backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
-    },
-  })
-  private async getBlockWithTransactions(
-    blockNumber: number,
-  ): Promise<BlockWithTransactions> {
-    try {
-      return await this.provider.getBlockWithTransactions(blockNumber);
-    } catch (e) {
-      this.logger.error(`getBlockWithTransactions: ${e}`);
-      throw e;
-    }
-  }
-
   private async backfillCache() {
-    const latestBlockNumber = await this.getLatestBlockNumber();
+    if (this.isBlockNumberSequential(this.latestBlockNumber)) return;
+    this.latestBlockNumber = await this.ethersProvider.getLatestBlockNumber();
     const startingBlock = Math.max(
-      latestBlockNumber - this.MAX_CACHE_SIZE + 1,
+      this.latestBlockNumber - this.MAX_CACHE_SIZE + 1,
       0,
-    ); // Ensure we don't fetch negative blocks
+    );
 
     for (
       let blockNumber = startingBlock;
-      blockNumber <= latestBlockNumber;
+      blockNumber <= this.latestBlockNumber;
       blockNumber++
     ) {
-      await this.appendBlockToCache(blockNumber);
+      const latestBlockWithTransactions =
+        await this.ethersProvider.getLatestBlockWithTransactions(blockNumber);
+      await this.appendBlockToCache(latestBlockWithTransactions);
     }
   }
 
-  private async appendBlockToCache(blockNumber: number) {
-    if (!this.isBlockNumberSequential(blockNumber)) {
+  private async appendBlockToCache(
+    blockWithTransactions: BlockWithTransactions,
+  ) {
+    if (!this.isBlockNumberSequential(blockWithTransactions.number)) {
       throw new Error('Unexpected block number sequence');
     }
-    const newBlock: BlockWithTransactions =
-      await this.getBlockWithTransactions(blockNumber);
-    this.blockCache.push(newBlock);
+    this.enforceCacheLimit();
 
-    this.blockAppendedSubject.next(newBlock); // Emit the new block
+    this.blockCache.push(blockWithTransactions);
   }
 
   private enforceCacheLimit() {
@@ -125,11 +93,11 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     return this.blockCache.length === this.MAX_CACHE_SIZE;
   }
 
-  getLatestBlock(): BlockWithTransactions {
+  getLatestBlockFromCache(): BlockWithTransactions {
     // access the last item pused into cache array
     if (this.blockCache.length == 0)
       throw new Error('No blocks found in cache');
-    return this.blockCache[-1];
+    return this.blockCache[this.blockCache.length - 1];
   }
 
   getLatestNBlocks(n: number): BlockWithTransactions[] {
@@ -141,7 +109,7 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   isCacheStale(): boolean {
-    const latestBlockTimestamp = this.getLatestBlock().timestamp;
+    const latestBlockTimestamp = this.getLatestBlockFromCache().timestamp;
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const blockInterval = this.configService.get<number>(
       'block_interval',
@@ -152,10 +120,9 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   private isBlockNumberSequential(blockNumber: number): boolean {
-    const lastCachedBlockNumber = this.getLatestBlock().number;
-    return (
-      lastCachedBlockNumber !== null &&
-      blockNumber === lastCachedBlockNumber + 1
-    );
+    if (this.blockCache && this.blockCache.length == 0) return true; //when the cache is empty return true
+
+    const lastCachedBlockNumber = this.getLatestBlockFromCache().number;
+    return blockNumber === lastCachedBlockNumber + 1;
   }
 }

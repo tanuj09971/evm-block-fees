@@ -4,19 +4,7 @@ import {
   TransactionResponse,
 } from '@ethersproject/abstract-provider';
 import { BigNumber, constants } from 'ethers';
-
-interface BlockStat {
-  avgNativeEthTransferFee: BigNumber;
-  optimalFee?: BigNumber; // Placeholder for future implementation
-  // Difficulty to estimate mempool size accurately; omit for now
-  // mempoolSize: BigNumber,
-  blockFullness?: BigNumber; // (0 - 100 representing percentage full)
-}
-
-interface BlockFeeData {
-  baseFee: BigNumber;
-  averagePriorityFee: BigNumber; // Assuming BigNumber is appropriate for your use case
-}
+import { BlockFeeData, BlockStat, Range } from 'src/types/ethers';
 
 @Injectable()
 export class BlockStatsService {
@@ -29,6 +17,7 @@ export class BlockStatsService {
     const avgNativeEthTransferFee =
       this.calculateAverageNativeEthTransferFee(blockFeeData);
 
+    const blocksRange = this.getBlockRange(blocks);
     // 2. Placeholder for more complex optimal fee calculation (to be implemented later)
     // const optimalFee = 0; // Assuming we don't have enough data for this yet
 
@@ -37,6 +26,8 @@ export class BlockStatsService {
 
     return {
       avgNativeEthTransferFee,
+      fromBlockNumber: blocksRange.from,
+      toBlockNumber: blocksRange.to,
       // optimalFee,
       // mempoolSize: 0, // Omit for now
       // blockFullness: averageBlockFullness,
@@ -63,6 +54,12 @@ export class BlockStatsService {
         averagePriorityFee: averageMaxPriorityFee,
       };
     });
+  }
+
+  private getBlockRange(blocks: BlockWithTransactions[]): Range {
+    const startBlock = blocks[0]?.number;
+    const lastBlock = blocks[blocks.length - 1]?.number;
+    return { from: startBlock, to: lastBlock };
   }
 
   private calculateAverageMaxPriorityFee(
@@ -92,6 +89,11 @@ export class BlockStatsService {
     const totalBlockFee = blocks.reduce((totalFee, block) => {
       return totalFee.add(block.averagePriorityFee.add(block.baseFee));
     }, constants.Zero);
+
+    if (blocks.length === 0) {
+      return constants.Zero;
+    }
+
     return totalBlockFee.div(blocks.length);
   }
 
