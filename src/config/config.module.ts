@@ -6,7 +6,7 @@ import CONFIG from './configuration';
 const CONFIG_SCHEMA = Joi.object({
   port: Joi.number().integer(),
   WSS_WEB3_URL: Joi.string().uri(),
-  // http_or_https_web3_url: Joi.string().uri(),
+  HTTPS_WEB3_URL: Joi.string().uri(),
   block_interval: Joi.number().integer(),
   max_cache_size: Joi.number().integer(),
   block_range: Joi.array(),

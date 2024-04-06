@@ -1,3 +1,4 @@
+import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
@@ -5,16 +6,13 @@ import {
   Observable,
   Subject,
   distinctUntilChanged,
-  fromEvent,
-  map,
+  fromEvent
 } from 'rxjs';
 import {
   BackOffPolicy,
   ExponentialBackoffStrategy,
   Retryable,
 } from 'typescript-retry-decorator';
-import { BlockEvent } from '../types/ethers';
-import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 
 enum ConnectionStatus {
   Unknown = -1,
@@ -43,8 +41,6 @@ export class Ethers {
     try {
       this.ethersWebsocketProvider = await this.connectToWebsocketProvider();
       this.logger.debug('WebSocket provider initialized successfully');
-      // Get initial block number for state management
-      this.lastBlockNumber = await this.getLatestBlockNumber();
     } catch (error) {
       this.logger.error('Error initializing provider:', error);
       throw error; // Ensure the error propagates for handling
@@ -52,26 +48,21 @@ export class Ethers {
   }
 
   async setOnBlockListener() {
-    // const blockObservable = fromEvent(this.ethersWebsocketProvider, 'block');
-
     const blockObservable = fromEvent(
       this.ethersWebsocketProvider,
       'block',
     ).pipe(
       distinctUntilChanged(), // Filter duplicates
-      map((blockNumber: number) => ({ blockNumber, isSynthetic: false })), // Create BlockEvent
     );
 
     blockObservable.subscribe({
-      next: async (blockEvent: BlockEvent) => {
-        if (this.lastBlockNumber !== blockEvent.blockNumber) {
-          this.logger.debug(`New block received: ${blockEvent.blockNumber}`);
-          this.lastBlockNumber = blockEvent.blockNumber; // Update lastBlockNumber
-          await this.handleBlockEvent(blockEvent);
+      next: async (blockNumber: number) => {
+        if (this.lastBlockNumber !== blockNumber) {
+          this.logger.debug(`Recieved new block number: ${blockNumber}`);
+          this.lastBlockNumber = blockNumber - 1; // Update lastBlockNumbers
+          await this.handleBlockEvent(blockNumber);
         } else {
-          this.logger.debug(
-            `Skipping duplicate block number: ${blockEvent.blockNumber}`,
-          );
+          this.logger.debug(`Skipping duplicate block number: ${blockNumber}`);
         }
       },
       error: (err) => {
@@ -80,31 +71,25 @@ export class Ethers {
     });
   }
 
-  private async handleBlockEvent(blockEvent: BlockEvent) {
+  private async handleBlockEvent(blockNumber: number) {
     const expectedBlockNumber = this.lastBlockNumber + 1;
 
-    if (blockEvent.blockNumber > expectedBlockNumber) {
-      await this.generateSyntheticBlocks(
-        expectedBlockNumber,
-        blockEvent.blockNumber,
-      );
+    if (blockNumber > expectedBlockNumber) {
+      await this.generateSyntheticBlocks(expectedBlockNumber, blockNumber);
       this.logger.warn(
-        `Missed blocks: Generated synthetic blocks from ${expectedBlockNumber} to ${blockEvent.blockNumber - 1}`,
+        `Missed blocks: Generated synthetic blocks from ${expectedBlockNumber} to ${blockNumber - 1}`,
       );
     }
 
-    this.lastBlockNumber = blockEvent.blockNumber;
-    this.lastBlockWithTransaction = await this.getLatestBlockWithTransactions(
-      this.lastBlockNumber,
-    );
+    this.lastBlockWithTransaction =
+      await this.getLatestBlockWithTransactions(blockNumber);
     this.newBlockSubject.next(this.lastBlockWithTransaction);
   }
 
   private async generateSyntheticBlocks(start: number, end: number) {
-    for (let i = start; i < end; i++) {
-      // this.newBlockSubject.next({ blockNumber: i, isSynthetic: true });
+    for (let blockNumber = start; blockNumber < end; blockNumber++) {
       const blockWithTransactions =
-        await this.getLatestBlockWithTransactions(i);
+        await this.getLatestBlockWithTransactions(blockNumber);
       this.newBlockSubject.next(blockWithTransactions);
     }
   }

@@ -4,7 +4,7 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
-  Logger
+  Logger,
 } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import { Request, Response } from 'express';
@@ -34,6 +34,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       case HttpStatus.BAD_REQUEST:
         return response.status(status).json({
           statusCode: HttpStatus.PRECONDITION_FAILED,
+          timestamp: new Date().toISOString(),
+          path: request.url,
+        });
+      case HttpStatus.TOO_MANY_REQUESTS:
+        return response.status(status).json({
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
           timestamp: new Date().toISOString(),
           path: request.url,
         });

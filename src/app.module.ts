@@ -7,11 +7,13 @@ import { BlockFeesModule } from './block-fees/block-fees.module';
 import { BlockStatsModule } from './block-stats/block-stats.module';
 import { AppConfigModule } from './config/config.module';
 import { EthersModule } from './ethers/ethers.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
     AppConfigModule,
     EthersModule,
+    HealthModule,
     ThrottlerModule.forRoot([
       {
         ttl: 1000,

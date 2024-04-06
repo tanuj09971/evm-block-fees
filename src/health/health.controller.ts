@@ -6,21 +6,23 @@ import {
   HttpHealthIndicator,
 } from '@nestjs/terminus';
 import { AxiosResponse } from 'axios';
+import { BlockAnalyticsCacheService } from 'src/block-analytics-cache/block-analytics-cache.service';
+import { BlockCacheService } from 'src/block-cache/block-cache.service';
 
 @Controller({ path: 'health', version: '1' })
 export class HealthController {
-  web3ProxyUrl: string = this.configService.get<string>(
-    'http_or_https_web3_url',
-  ) as string;
+  web3ProxyUrl: string =
+    this.configService.getOrThrow<string>('HTTPS_WEB3_URL');
   cacheKey: string;
-  blockInterval: number = this.configService.get<number>(
-    'block_interval',
-  ) as number;
+  blockInterval: number =
+    this.configService.getOrThrow<number>('block_interval');
 
   constructor(
     private health: HealthCheckService,
     private http: HttpHealthIndicator,
     private readonly configService: ConfigService,
+    private readonly blockCacheService: BlockCacheService, // Inject services
+    private readonly blockAnalyticsCacheService: BlockAnalyticsCacheService,
   ) {}
 
   @Get()
@@ -52,6 +54,37 @@ export class HealthController {
             }),
           },
         ),
+      () => ({
+        'block-cache-stale': {
+          status: this.blockCacheService.isCacheStale() ? 'down' : 'up',
+        },
+      }),
+
+      // Analytics Cache Checks
+      () => ({
+        'analytics-cache-1-block': {
+          status: this.checkAnalyticsCache(1) ? 'up' : 'down',
+        },
+      }),
+      () => ({
+        'analytics-cache-5-blocks': {
+          status: this.checkAnalyticsCache(5) ? 'up' : 'down',
+        },
+      }),
+      () => ({
+        'analytics-cache-30-blocks': {
+          status: this.checkAnalyticsCache(30) ? 'up' : 'down',
+        },
+      }),
     ]);
+  }
+
+  private checkAnalyticsCache(n: number): boolean {
+    try {
+      this.blockAnalyticsCacheService.getStatsForLatestNBlocks(n);
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 }

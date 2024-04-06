@@ -34,6 +34,7 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     this.newBlockObservable = this.ethersProvider.getNewBlockObservable();
     this.newBlockObservable.subscribe(async (blockWithTransactions) => {
       this.logger.debug(`Received new block: ${blockWithTransactions.number}`);
+      this.latestBlockNumber = blockWithTransactions.number;
       await this.appendBlockToCache(blockWithTransactions);
     });
   }
@@ -95,9 +96,10 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     this.logger.debug('Adding block timestamp:', timestamp);
     this.logger.debug('Cache size before adding:', this.blockCache.size);
 
+    // Add to LRU with the block timestamp
     this.blockCache.set(number, blockWithTransactions, {
       ttl: timestamp,
-    }); // Add to LRU
+    });
     this.logger.debug('Cache size after adding:', this.blockCache.size);
     this.blockAppendedSubject.next(blockWithTransactions);
   }
@@ -114,7 +116,10 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     if (this.blockCache && this.blockCache.size === 0) {
       throw new Error('No blocks found in cache');
     }
-    return this.blockCache.values().next().value as BlockWithTransactions;
+
+    const latestKey = this.sortBlockCache().at(-1) as number;
+    this.logger.debug('getLatestBlockFromCache->latestKey', latestKey);
+    return this.blockCache.get(latestKey) as BlockWithTransactions;
   }
 
   getLatestNBlocks(n: number): BlockWithTransactions[] {
@@ -124,12 +129,8 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
       );
     }
     // Retrieve an array of the 'n' latest keys
-    const keys = Array.from(this.blockCache.keys()).slice(-n);
-    keys.sort();
-    // this.logger.log('TCL: BlockCacheService -> keys', keys);
-
-    // Efficiently build result array using map
-    return keys.map((key) => this.blockCache.get(key)!);
+    const cacheKeys = this.sortBlockCache().slice(-n);
+    return cacheKeys.map((key) => this.blockCache.get(key)!);
   }
 
   private isBlockNumberSequential(blockNumber: number): boolean {
@@ -149,13 +150,30 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     return false;
   }
 
+  sortBlockCache(): Array<number> {
+    const keys = Array.from(this.blockCache.keys());
+    keys.sort();
+    return keys;
+  }
+
   isCacheStale(): boolean {
     const latestBlockTimestamp = this.getLatestBlockFromCache().timestamp;
+    this.logger.log(
+      'TCL: BlockCacheService -> latestBlockTimestamp',
+      latestBlockTimestamp,
+    );
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    const blockInterval = this.configService.get<number>(
-      'block_interval',
-    ) as number;
+    this.logger.log(
+      'TCL: BlockCacheService -> currentTimestamp',
+      currentTimestamp,
+    );
+    const blockInterval =
+      this.configService.getOrThrow<number>('block_interval');
     const validBlockInterval = currentTimestamp - blockInterval;
-    return validBlockInterval < latestBlockTimestamp;
+    this.logger.log(
+      'TCL: BlockCacheService -> validBlockInterval',
+      validBlockInterval,
+    );
+    return latestBlockTimestamp < validBlockInterval;
   }
 }
