@@ -4,7 +4,7 @@ import {
   TransactionResponse,
 } from '@ethersproject/abstract-provider';
 import { BigNumber, constants } from 'ethers';
-import { BlockFeeData, BlockStat, Range } from 'src/types/ethers';
+import { BlockFeeData, BlockStat, Range, Unit } from 'src/types/ethers';
 
 @Injectable()
 export class BlockStatsService {
@@ -29,6 +29,7 @@ export class BlockStatsService {
       fromBlockNumber: blocksRange.from,
       toBlockNumber: blocksRange.to,
       totalBlocks: blocksRange.total,
+      unit: Unit.Wei,
       // optimalFee,
       // mempoolSize: 0, // Omit for now
       // blockFullness: averageBlockFullness,

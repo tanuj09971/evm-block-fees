@@ -38,8 +38,7 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
       async (block: BlockWithTransactions) => {
         this.logger.debug(
           `Block received in BlockAnalyticsCacheService: ${block.number}`,
-        ); // Log block number
-
+        );
         try {
           await this.updateStatsCache();
         } catch (error) {

@@ -5,12 +5,18 @@ export interface BlockEvent {
   isSynthetic: boolean;
 }
 
+export enum Unit {
+  Wei = 'wei',
+  Gwei = 'gwei',
+  Ether = 'ether',
+}
+
 export interface BlockStat {
   avgNativeEthTransferFee: string;
   // lastBlockEthTransferFee:BigNumber;
   // last5BlocksEthTransferFee:BigNumber;
   // last30BlocksEthTransferFee:BigNumber;
-
+  unit: string;
   optimalFee?: BigNumber; // Placeholder for future implementation
   // Difficulty to estimate mempool size accurately; omit for now
   // mempoolSize: BigNumber,

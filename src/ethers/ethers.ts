@@ -2,12 +2,7 @@ import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
-import {
-  Observable,
-  Subject,
-  distinctUntilChanged,
-  fromEvent
-} from 'rxjs';
+import { Observable, Subject, distinct, fromEvent } from 'rxjs';
 import {
   BackOffPolicy,
   ExponentialBackoffStrategy,
@@ -24,11 +19,12 @@ enum ConnectionStatus {
 
 @Injectable()
 export class Ethers {
-  private ethersWebsocketProvider: ethers.providers.WebSocketProvider;
+  ethersWebsocketProvider: ethers.providers.WebSocketProvider;
   private readonly logger = new Logger(Ethers.name);
   private newBlockSubject = new Subject<BlockWithTransactions>(); // For emitting new block numbers
-  private lastBlockNumber: number;
-  private lastBlockWithTransaction: BlockWithTransactions;
+  lastBlockNumber: number;
+  lastBlockWithTransaction: BlockWithTransactions;
+  blockObservable: Observable<unknown>;
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -48,16 +44,19 @@ export class Ethers {
   }
 
   async setOnBlockListener() {
-    const blockObservable = fromEvent(
+    this.blockObservable = fromEvent(
       this.ethersWebsocketProvider,
       'block',
     ).pipe(
-      distinctUntilChanged(), // Filter duplicates
+      distinct((blockNumber: number) => blockNumber), // Filter duplicates
     );
 
-    blockObservable.subscribe({
+    this.blockObservable.subscribe({
       next: async (blockNumber: number) => {
-        if (this.lastBlockNumber !== blockNumber) {
+        if (
+          this.lastBlockNumber == undefined ||
+          this.lastBlockNumber !== blockNumber
+        ) {
           this.logger.debug(`Recieved new block number: ${blockNumber}`);
           this.lastBlockNumber = blockNumber - 1; // Update lastBlockNumbers
           await this.handleBlockEvent(blockNumber);
@@ -71,7 +70,7 @@ export class Ethers {
     });
   }
 
-  private async handleBlockEvent(blockNumber: number) {
+  async handleBlockEvent(blockNumber: number): Promise<void> {
     const expectedBlockNumber = this.lastBlockNumber + 1;
 
     if (blockNumber > expectedBlockNumber) {
@@ -86,7 +85,7 @@ export class Ethers {
     this.newBlockSubject.next(this.lastBlockWithTransaction);
   }
 
-  private async generateSyntheticBlocks(start: number, end: number) {
+  async generateSyntheticBlocks(start: number, end: number): Promise<void> {
     for (let blockNumber = start; blockNumber < end; blockNumber++) {
       const blockWithTransactions =
         await this.getLatestBlockWithTransactions(blockNumber);
@@ -109,7 +108,7 @@ export class Ethers {
       backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
     },
   })
-  private async establishWebsocketConnectionWithRetries(
+  async establishWebsocketConnectionWithRetries(
     wssUrl: string,
   ): Promise<ethers.providers.WebSocketProvider> {
     try {
@@ -183,16 +182,14 @@ export class Ethers {
     }
   }
 
-  //TODO: name this as getProvider as ethers.getProvider makes more sense and provide more abstraction
   getWebsocketProvider(): ethers.providers.WebSocketProvider {
     if (this.getConnectionState() === ConnectionStatus.Open) {
       throw new Error('Websocket provider not connected');
     }
     return this.ethersWebsocketProvider;
   }
+
   getNewBlockObservable(): Observable<BlockWithTransactions> {
-    return this.newBlockSubject.asObservable().pipe(
-      distinctUntilChanged(), // Filter duplicates
-    );
+    return this.newBlockSubject.asObservable();
   }
 }
