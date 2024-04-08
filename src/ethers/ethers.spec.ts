@@ -20,12 +20,14 @@ describe('Ethers', () => {
     configService = module.get<ConfigService>(ConfigService);
     wssWeb3Url = configService.getOrThrow<string>('WSS_WEB3_URL');
     blockInterval = configService.getOrThrow<number>('block_interval');
-    ethersService.ethersWebsocketProvider =
-      await ethersService.establishWebsocketConnectionWithRetries(wssWeb3Url);
+    ethersService['ethersWebsocketProvider'] =
+      await ethersService['establishWebsocketConnectionWithRetries'](
+        wssWeb3Url,
+      );
   });
 
   afterEach(async () => {
-    await ethersService.disposeCurrentProvider();
+    await ethersService['disposeCurrentProvider']();
   });
 
   it('should be defined', () => {
@@ -38,13 +40,13 @@ describe('Ethers', () => {
       expect(typeof blockNumber).toBe('number');
     });
     it('should throw an error if the connection fails', async () => {
-      if (!ethersService.ethersWebsocketProvider) {
+      if (!ethersService['ethersWebsocketProvider']) {
         await expect(ethersService.getLatestBlockNumber()).rejects.toThrow(
           new ConnectionTimeoutException(),
         );
       }
 
-      expect(ethersService.ethersWebsocketProvider._lastBlockNumber).toEqual(
+      expect(ethersService['ethersWebsocketProvider']._lastBlockNumber).toEqual(
         -2,
       );
     });
@@ -52,13 +54,13 @@ describe('Ethers', () => {
 
   describe('disposeCurrentProvider', () => {
     it('should dipose the provider', async () => {
-      expect(ethersService.ethersWebsocketProvider._wsReady).toBe(false);
+      expect(ethersService['ethersWebsocketProvider']._wsReady).toBe(false);
     });
   });
 
   describe('setOnBlockListener', () => {
     it('should emit block numbers from the WebsocketProvider', async () => {
-      await ethersService.setOnBlockListener();
+      await ethersService['setOnBlockListener']();
 
       // Wait for lastBlockNumber to be updated
       await new Promise((resolve) =>
@@ -67,7 +69,7 @@ describe('Ethers', () => {
 
       const latestBlockNumber = await ethersService.getLatestBlockNumber();
 
-      expect(ethersService.lastBlockNumber + 1).toBe(latestBlockNumber);
+      expect(ethersService['lastBlockNumber'] + 1).toBe(latestBlockNumber);
     }, 14000);
   });
 
@@ -76,23 +78,23 @@ describe('Ethers', () => {
       const mockBlockNumber = 19605626;
       const mockHashValue =
         '0x1abb0d0287ce8bc51a7613c0b25bea5a8e2c7eaefae15228c2ed0ef354eb541e';
-      await ethersService.handleBlockEvent(mockBlockNumber);
+      await ethersService['handleBlockEvent'](mockBlockNumber);
 
-      ethersService.lastBlockNumber = mockBlockNumber - 1;
-      expect(ethersService.lastBlockWithTransaction.hash).toEqual(
+      ethersService['lastBlockNumber'] = mockBlockNumber - 1;
+      expect(ethersService['lastBlockWithTransaction'].hash).toEqual(
         mockHashValue,
       );
     });
     it('should generate synthetic blocks when blockNumber is greater than expectedBlockNumber', async () => {
       const mockBlockNumber = 19605626;
-      ethersService.lastBlockNumber = 19605620;
+      ethersService['lastBlockNumber'] = 19605620;
 
       jest
-        .spyOn(ethersService, 'generateSyntheticBlocks')
+        .spyOn(ethersService as any, 'generateSyntheticBlocks')
         .mockResolvedValue(undefined);
-      await ethersService.handleBlockEvent(mockBlockNumber);
-      expect(ethersService.generateSyntheticBlocks).toHaveBeenCalledWith(
-        ethersService.lastBlockNumber + 1,
+      await ethersService['handleBlockEvent'](mockBlockNumber);
+      expect(ethersService['generateSyntheticBlocks']).toHaveBeenCalledWith(
+        ethersService['lastBlockNumber'] + 1,
         mockBlockNumber,
       );
     });
@@ -102,7 +104,7 @@ describe('Ethers', () => {
     it('should return the latest block number', async () => {
       const blockNumber = await ethersService.getLatestBlockNumber();
       const latestBlockNumber =
-        await ethersService.ethersWebsocketProvider.getBlockNumber();
+        await ethersService['ethersWebsocketProvider'].getBlockNumber();
       expect(blockNumber).toEqual(latestBlockNumber);
     });
     it('should throw error on failures', async () => {

@@ -19,12 +19,11 @@ enum ConnectionStatus {
 
 @Injectable()
 export class Ethers {
-  ethersWebsocketProvider: ethers.providers.WebSocketProvider;
+  private ethersWebsocketProvider: ethers.providers.WebSocketProvider;
   private readonly logger = new Logger(Ethers.name);
   private newBlockSubject = new Subject<BlockWithTransactions>(); // For emitting new block numbers
-  lastBlockNumber: number;
-  lastBlockWithTransaction: BlockWithTransactions;
-  blockObservable: Observable<unknown>;
+  private lastBlockNumber: number;
+  private lastBlockWithTransaction: BlockWithTransactions;
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -43,15 +42,15 @@ export class Ethers {
     }
   }
 
-  async setOnBlockListener() {
-    this.blockObservable = fromEvent(
+  private async setOnBlockListener() {
+    const blockObservable = fromEvent(
       this.ethersWebsocketProvider,
       'block',
     ).pipe(
       distinct((blockNumber: number) => blockNumber), // Filter duplicates
     );
 
-    this.blockObservable.subscribe({
+    blockObservable.subscribe({
       next: async (blockNumber: number) => {
         if (
           this.lastBlockNumber == undefined ||
@@ -70,7 +69,7 @@ export class Ethers {
     });
   }
 
-  async handleBlockEvent(blockNumber: number): Promise<void> {
+  private async handleBlockEvent(blockNumber: number): Promise<void> {
     const expectedBlockNumber = this.lastBlockNumber + 1;
 
     if (blockNumber > expectedBlockNumber) {
@@ -85,7 +84,10 @@ export class Ethers {
     this.newBlockSubject.next(this.lastBlockWithTransaction);
   }
 
-  async generateSyntheticBlocks(start: number, end: number): Promise<void> {
+  private async generateSyntheticBlocks(
+    start: number,
+    end: number,
+  ): Promise<void> {
     for (let blockNumber = start; blockNumber < end; blockNumber++) {
       const blockWithTransactions =
         await this.getLatestBlockWithTransactions(blockNumber);
@@ -93,7 +95,7 @@ export class Ethers {
     }
   }
 
-  async connectToWebsocketProvider(): Promise<ethers.providers.WebSocketProvider> {
+  private async connectToWebsocketProvider(): Promise<ethers.providers.WebSocketProvider> {
     const wssUrl = this.configService.getOrThrow<string>('WSS_WEB3_URL');
     return await this.establishWebsocketConnectionWithRetries(wssUrl);
   }
@@ -108,7 +110,7 @@ export class Ethers {
       backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
     },
   })
-  async establishWebsocketConnectionWithRetries(
+  private async establishWebsocketConnectionWithRetries(
     wssUrl: string,
   ): Promise<ethers.providers.WebSocketProvider> {
     try {
@@ -127,7 +129,7 @@ export class Ethers {
       .readyState as ConnectionStatus;
   }
 
-  async disposeCurrentProvider() {
+  private async disposeCurrentProvider() {
     await this.ethersWebsocketProvider?.destroy();
   }
 
