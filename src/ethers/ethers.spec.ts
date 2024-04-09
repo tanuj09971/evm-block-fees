@@ -116,23 +116,23 @@ describe('Ethers', () => {
     });
   });
 
-  describe('getLatestBlockWithTransactions', () => {
+  describe('getBlockWithTransactionsByNumber', () => {
     it('should return the latest block with transactions', async () => {
       const mockBlockNumber = 19605626;
       const mockHashValue =
         '0x1abb0d0287ce8bc51a7613c0b25bea5a8e2c7eaefae15228c2ed0ef354eb541e';
       const blockWithTransactions =
-        await ethersService.getLatestBlockWithTransactions(mockBlockNumber);
+        await ethersService.getBlockWithTransactionsByNumber(mockBlockNumber);
 
       expect(blockWithTransactions.hash).toEqual(mockHashValue);
     });
     it('should throw error on failures', async () => {
       jest
-        .spyOn(ethersService, 'getLatestBlockWithTransactions')
+        .spyOn(ethersService, 'getBlockWithTransactionsByNumber')
         .mockRejectedValueOnce(new Error());
 
       await expect(
-        ethersService.getLatestBlockWithTransactions(212),
+        ethersService.getBlockWithTransactionsByNumber(212),
       ).rejects.toThrowError();
     });
   });

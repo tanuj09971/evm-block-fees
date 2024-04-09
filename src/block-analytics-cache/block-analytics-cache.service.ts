@@ -7,9 +7,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Observable } from 'rxjs';
-import { BlockCacheService } from 'src/block-cache/block-cache.service';
-import { BlockStatsService } from 'src/block-stats/block-stats.service';
-import { BlockStat } from 'src/types/ethers';
+import { BlockCacheService } from '../block-cache/block-cache.service';
+import { BlockStatsService } from '../block-stats/block-stats.service';
+import { BlockStat } from '../types/ethers';
 
 @Injectable()
 export class BlockAnalyticsCacheService implements OnModuleInit {

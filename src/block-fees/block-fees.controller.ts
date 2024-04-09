@@ -1,6 +1,6 @@
 import { Controller, Get, UseGuards, UseInterceptors } from '@nestjs/common';
 import { BlockFeesService } from './block-fees.service';
-import { BlockStat } from 'src/types/ethers';
+import { BlockStat } from '../types/ethers';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ThrottlerGuard } from '@nestjs/throttler';
 

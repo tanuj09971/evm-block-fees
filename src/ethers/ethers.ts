@@ -80,7 +80,7 @@ export class Ethers {
     }
 
     this.lastBlockWithTransaction =
-      await this.getLatestBlockWithTransactions(blockNumber);
+      await this.getBlockWithTransactionsByNumber(blockNumber);
     this.newBlockSubject.next(this.lastBlockWithTransaction);
   }
 
@@ -90,7 +90,7 @@ export class Ethers {
   ): Promise<void> {
     for (let blockNumber = start; blockNumber < end; blockNumber++) {
       const blockWithTransactions =
-        await this.getLatestBlockWithTransactions(blockNumber);
+        await this.getBlockWithTransactionsByNumber(blockNumber);
       this.newBlockSubject.next(blockWithTransactions);
     }
   }
@@ -171,7 +171,7 @@ export class Ethers {
       backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
     },
   })
-  async getLatestBlockWithTransactions(
+  async getBlockWithTransactionsByNumber(
     blockNumber: number,
   ): Promise<BlockWithTransactions> {
     try {

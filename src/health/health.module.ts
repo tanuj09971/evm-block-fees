@@ -3,10 +3,10 @@ import { Module } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
 import { HealthController } from './health.controller';
 import { ConfigService } from '@nestjs/config';
-import { BlockCacheService } from 'src/block-cache/block-cache.service';
-import { Ethers } from 'src/ethers/ethers';
-import { BlockAnalyticsCacheService } from 'src/block-analytics-cache/block-analytics-cache.service';
-import { BlockStatsService } from 'src/block-stats/block-stats.service';
+import { BlockCacheService } from '../block-cache/block-cache.service';
+import { Ethers } from '../ethers/ethers';
+import { BlockAnalyticsCacheService } from '../block-analytics-cache/block-analytics-cache.service';
+import { BlockStatsService } from '../block-stats/block-stats.service';
 
 @Module({
   imports: [TerminusModule, HttpModule],

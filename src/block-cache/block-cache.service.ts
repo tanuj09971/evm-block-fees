@@ -9,7 +9,7 @@ import {
 import { LRUCache } from 'lru-cache';
 import { ConfigService } from '@nestjs/config';
 import { Observable, Subject, distinct, share } from 'rxjs';
-import { Ethers } from 'src/ethers/ethers';
+import { Ethers } from '../ethers/ethers';
 
 @Injectable()
 export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
@@ -84,10 +84,12 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
           this.logger.debug(
             `Block already present in the cache: ${blockNumber}`,
           );
-          return;
+          continue;
         }
         const latestBlockWithTransactions =
-          await this.ethersProvider.getLatestBlockWithTransactions(blockNumber);
+          await this.ethersProvider.getBlockWithTransactionsByNumber(
+            blockNumber,
+          );
         await this.appendBlockToCache(latestBlockWithTransactions);
       }
     }
@@ -144,7 +146,6 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     }
 
     const latestKey = this.sortBlockCache().at(-1) as number;
-    this.logger.debug('getLatestBlockFromCache->latestKey', latestKey);
     return this.blockCache.get(latestKey) as BlockWithTransactions;
   }
 

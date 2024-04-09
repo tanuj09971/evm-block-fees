@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BlockAnalyticsCacheService } from 'src/block-analytics-cache/block-analytics-cache.service';
-import { BlockStat } from 'src/types/ethers';
+import { BlockAnalyticsCacheService } from '../block-analytics-cache/block-analytics-cache.service';
+import { BlockStat } from '../types/ethers';
 
 @Injectable()
 export class BlockFeesService {

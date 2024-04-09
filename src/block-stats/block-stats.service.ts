@@ -4,7 +4,7 @@ import {
   TransactionResponse,
 } from '@ethersproject/abstract-provider';
 import { BigNumber, constants } from 'ethers';
-import { BlockFeeData, BlockStat, Range, Unit } from 'src/types/ethers';
+import { BlockFeeData, BlockStat, Range, Unit } from '../types/ethers';
 
 @Injectable()
 export class BlockStatsService {

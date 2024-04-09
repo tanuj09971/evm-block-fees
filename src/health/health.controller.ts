@@ -6,8 +6,8 @@ import {
   HttpHealthIndicator,
 } from '@nestjs/terminus';
 import { AxiosResponse } from 'axios';
-import { BlockAnalyticsCacheService } from 'src/block-analytics-cache/block-analytics-cache.service';
-import { BlockCacheService } from 'src/block-cache/block-cache.service';
+import { BlockAnalyticsCacheService } from '../block-analytics-cache/block-analytics-cache.service';
+import { BlockCacheService } from '../block-cache/block-cache.service';
 
 @Controller({ path: 'health', version: '1' })
 export class HealthController {
