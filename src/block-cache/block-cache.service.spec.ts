@@ -1,27 +1,26 @@
+import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppConfigModule } from '../config/config.module';
 import { Ethers } from '../ethers/ethers';
 import { BlockCacheService } from './block-cache.service';
-import { AppConfigModule } from '../config/config.module';
-import { Logger } from '@nestjs/common';
 
 describe('BlockCacheService', () => {
   let blockCacheService: BlockCacheService;
   let configService: ConfigService;
-  let logger: Logger;
   let ethersProvider: Ethers;
   let wssWeb3Url: string;
   let MAX_CACHE_SIZE: number;
-  const mockBlockNumber = 19609637;
+  const mockBlockNumber: number = 19609637;
+  let mockBlockWithTransactions: BlockWithTransactions;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppConfigModule],
-      providers: [BlockCacheService, Ethers, ConfigService, Logger],
+      providers: [BlockCacheService, Ethers, ConfigService],
     }).compile();
 
     blockCacheService = module.get<BlockCacheService>(BlockCacheService);
-    logger = module.get<Logger>(Logger);
     configService = module.get<ConfigService>(ConfigService);
     ethersProvider = module.get<Ethers>(Ethers);
 
@@ -31,6 +30,8 @@ describe('BlockCacheService', () => {
       await ethersProvider['establishWebsocketConnectionWithRetries'](
         wssWeb3Url,
       );
+    mockBlockWithTransactions =
+      await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
   });
 
   afterEach(async () => {
@@ -61,14 +62,12 @@ describe('BlockCacheService', () => {
       const expectedCacheSize =
         mockBlockNumber - latestBlockWithTransactions.number + 1;
       expect(blockCacheService['blockCache'].size).toEqual(expectedCacheSize);
-    });
+    }, 10000);
   });
 
   describe('appendBlockToCache', () => {
     it('should successfully append the block to cache', async () => {
-      const blockWithTransactions =
-        await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
-      await blockCacheService['appendBlockToCache'](blockWithTransactions);
+      await blockCacheService['appendBlockToCache'](mockBlockWithTransactions);
 
       expect(
         blockCacheService['blockCache'].get(mockBlockNumber)?.hash,
@@ -77,38 +76,34 @@ describe('BlockCacheService', () => {
       );
     });
 
-    // it('should return if the block is already present', async () => {
-    //   const blockWithTransactions =
-    //     await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
-    //   blockCacheService['blockCache'].set(
-    //     mockBlockNumber,
-    //     blockWithTransactions,
-    //     {
-    //       ttl: blockWithTransactions.timestamp,
-    //     },
-    //   );
+    it('should return if the block is already present', async () => {
+      blockCacheService['blockCache'].set(
+        mockBlockNumber,
+        mockBlockWithTransactions,
+        {
+          ttl: mockBlockWithTransactions.timestamp,
+        },
+      );
 
-    //   await blockCacheService['appendBlockToCache'](blockWithTransactions);
+      await blockCacheService['appendBlockToCache'](mockBlockWithTransactions);
 
-    //   expect(logger.debug).toHaveBeenCalledWith(
-    //     `Block already present in the cache: ${blockWithTransactions.number}`,
-    //   );
-    // });
+      expect(blockCacheService['hasBlockInCache'](mockBlockNumber)).toEqual(
+        true,
+      );
+    });
   });
 
   describe('getLatestBlockFromCache', () => {
     it('should return the latest block stored in cache', async () => {
-      const blockWithTransactions =
-        await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
       blockCacheService['blockCache'].set(
         mockBlockNumber,
-        blockWithTransactions,
+        mockBlockWithTransactions,
         {
-          ttl: blockWithTransactions.timestamp,
+          ttl: mockBlockWithTransactions.timestamp,
         },
       );
       const latestBlockFromCache = blockCacheService.getLatestBlockFromCache();
-      expect(latestBlockFromCache.hash).toEqual(blockWithTransactions.hash);
+      expect(latestBlockFromCache.hash).toEqual(mockBlockWithTransactions.hash);
     });
 
     it('should throw Error when cache is empty', () => {
@@ -122,6 +117,42 @@ describe('BlockCacheService', () => {
 
       expect(errorCaught).toBeInstanceOf(Error);
       expect(errorCaught.message).toBe('No blocks found in cache');
+    });
+  });
+
+  describe('getLatestNBlocks', () => {
+    it('should return the last block or the latest block in the cache', async () => {
+      const n = 5;
+      for (let i = mockBlockNumber - n - 1; i <= mockBlockNumber; i++) {
+        blockCacheService['blockCache'].set(i, mockBlockWithTransactions, {
+          ttl: mockBlockWithTransactions.timestamp,
+        });
+      }
+      const latestBlock = blockCacheService.getLatestNBlocks(5);
+      expect(latestBlock.length).toEqual(n);
+    });
+
+    it('should throw Exception when n exceeds cache size', async () => {
+      const n = 32;
+      let errorMessage;
+      try {
+        const blocks = blockCacheService.getLatestNBlocks(n);
+      } catch (error) {
+        errorMessage = error.message;
+      }
+      expect(errorMessage).toEqual(`${n} exceeds hard limit ${MAX_CACHE_SIZE}`);
+    });
+  });
+
+  describe('isCacheStale', () => {
+    it('should return true if the last block in the cache is older than the block interval', async () => {
+      blockCacheService['blockCache'].set(
+        mockBlockNumber,
+        mockBlockWithTransactions,
+        { ttl: mockBlockWithTransactions.timestamp },
+      );
+
+      expect(blockCacheService.isCacheStale()).toEqual(true);
     });
   });
 });
