@@ -12,7 +12,7 @@ export enum Unit {
 }
 
 export interface BlockStat {
-  avgNativeEthTransferFee: string;
+  averageFeePerBlockInRange: string;
   // lastBlockEthTransferFee:BigNumber;
   // last5BlocksEthTransferFee:BigNumber;
   // last30BlocksEthTransferFee:BigNumber;

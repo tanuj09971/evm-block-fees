@@ -121,6 +121,12 @@ export class Ethers {
       await this.disposeCurrentProvider(); // Cleanup on error
       throw error;
     }
+    //  finally {
+    //   // Dispose the provider even if there was no error initially
+    //   if (this.ethersWebsocketProvider) {
+    //     this.ethersWebsocketProvider.destroy(); // Or use your provider's disposal method
+    //   }
+    // }
   }
 
   //TODO do we get ready state after connection or not
@@ -191,6 +197,15 @@ export class Ethers {
       throw new Error('Websocket provider not connected');
     }
     return this.ethersWebsocketProvider;
+  }
+
+  async getBytecode(address: string): Promise<string> {
+    try {
+      return await this.ethersWebsocketProvider.getCode(address);
+    } catch (error) {
+      console.error('Error fetching bytecode:', error);
+      throw error;
+    }
   }
 
   getNewBlockObservable(): Observable<BlockWithTransactions> {
