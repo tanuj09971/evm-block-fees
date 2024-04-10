@@ -15,17 +15,14 @@ import { BlockStat } from '../types/ethers';
 export class BlockAnalyticsCacheService implements OnModuleInit {
   private statsCache: Map<number, BlockStat> = new Map(); // Key: number of blocks, Value: stats
   private readonly statsForNBlocks: Array<number>;
-  private readonly MAX_CACHE_SIZE: number;
   private logger: Logger = new Logger(BlockAnalyticsCacheService.name);
   private newBlockWithTransactionObservable: Observable<BlockWithTransactions>;
 
   constructor(
+    private readonly configService: ConfigService,
     private readonly blockCacheService: BlockCacheService,
     private blockStatService: BlockStatsService,
-    private configService: ConfigService,
   ) {
-    this.MAX_CACHE_SIZE =
-      this.configService.getOrThrow<number>('max_cache_size');
     this.statsForNBlocks =
       this.configService.getOrThrow<Array<number>>('block_range');
   }

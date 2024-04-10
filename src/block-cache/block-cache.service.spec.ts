@@ -25,7 +25,7 @@ describe('BlockCacheService', () => {
     ethersProvider = module.get<Ethers>(Ethers);
 
     wssWeb3Url = configService.getOrThrow<string>('WSS_WEB3_URL');
-    MAX_CACHE_SIZE = configService.getOrThrow<number>('max_cache_size');
+    MAX_CACHE_SIZE = configService.getOrThrow<number>('MAX_CACHE_SIZE');
     ethersProvider['ethersWebsocketProvider'] =
       await ethersProvider['establishWebsocketConnectionWithRetries'](
         wssWeb3Url,
@@ -95,6 +95,7 @@ describe('BlockCacheService', () => {
 
   describe('getLatestBlockFromCache', () => {
     it('should return the latest block stored in cache', async () => {
+      console.log('TCL: mockBlockWithTransactions', mockBlockWithTransactions);
       blockCacheService['blockCache'].set(
         mockBlockNumber,
         mockBlockWithTransactions,

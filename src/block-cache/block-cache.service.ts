@@ -25,7 +25,7 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     private readonly configService: ConfigService,
   ) {
     this.MAX_CACHE_SIZE =
-      this.configService.getOrThrow<number>('max_cache_size');
+      this.configService.getOrThrow<number>('MAX_CACHE_SIZE');
     this.blockCache = new LRUCache({ max: Number(this.MAX_CACHE_SIZE) }); // Initialize LRU cache
   }
 
