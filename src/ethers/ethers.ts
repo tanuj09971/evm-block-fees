@@ -157,6 +157,7 @@ export class Ethers {
       return blockNumber;
     } catch (e) {
       this.logger.error(`getLatestBlockNumber: ${e}`);
+      await this.initializeProvider(); //reintialize it before trying this funciton again
       throw e;
     }
   }
@@ -180,6 +181,7 @@ export class Ethers {
       );
     } catch (e) {
       this.logger.error(`getBlockWithTransactions: ${e}`);
+      await this.initializeProvider(); //reintialize it before trying this funciton again
       throw e;
     }
   }
