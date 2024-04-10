@@ -3,60 +3,74 @@ import {
   BlockWithTransactions,
   TransactionResponse,
 } from '@ethersproject/abstract-provider';
-import { BigNumber, constants } from 'ethers';
+import { BigNumber, constants, ethers } from 'ethers';
 import { BlockFeeData, BlockStat, Range, Unit } from '../types/ethers';
+import { Ethers } from '../ethers/ethers';
 
 @Injectable()
 export class BlockStatsService {
-  private logger: Logger = new Logger(BlockStatsService.name);
-  constructor() {}
+  constructor(private ethersProvider: Ethers) {}
 
+  // async calculateStats(blocks: BlockWithTransactions[]): Promise<BlockStat> {
   async calculateStats(blocks: BlockWithTransactions[]): Promise<BlockStat> {
-    const blockFeeData = this.calculateBlockEthTransactionTotalFeeData(blocks);
+    const blockFeeData = await this.calculateBlockEthTransactionFeeData(blocks);
     // 1. Average native ETH transfer fees calculation
     const avgNativeEthTransferFee =
       this.calculateAverageNativeEthTransferFee(blockFeeData);
-
     const blocksRange = this.getBlockRange(blocks);
-    // 2. Placeholder for more complex optimal fee calculation (to be implemented later)
-    // const optimalFee = 0; // Assuming we don't have enough data for this yet
-
-    // 3. Block fullness calculation
-    // const averageBlockFullness = this.calculateAverageBlockFullness(blocks);
 
     return {
-      avgNativeEthTransferFee: avgNativeEthTransferFee.toString(),
+      averageFeePerBlockInRange: avgNativeEthTransferFee.toString(),
       fromBlockNumber: blocksRange.from,
       toBlockNumber: blocksRange.to,
       totalBlocks: blocksRange.total,
       unit: Unit.Wei,
-      // optimalFee,
-      // mempoolSize: 0, // Omit for now
-      // blockFullness: averageBlockFullness,
     };
   }
 
-  // Filter out non-native ETH transfer transactions
-  private filterNativeEthTransfers(
+  // Filter out non-contract transactions
+  private async filterNonContractTransfers(
     transactions: TransactionResponse[],
-  ): TransactionResponse[] {
-    return transactions.filter((tx) => !!tx.value); // Assuming 'value' indicates ETH transfer
+  ): Promise<TransactionResponse[]> {
+    const filteredTransactions = await Promise.all(
+      transactions.map(async (tx) => {
+        if (tx.to) {
+          const bytecode = await this.ethersProvider.getBytecode(tx.to);
+          if (bytecode.length === 2) return tx;
+        }
+      }),
+    );
+    return filteredTransactions.filter(
+      (tx): tx is TransactionResponse => tx !== undefined,
+    );
+  }
+
+  // Filter out non-native ETH transfer from transactions
+  private async filterNativeEthTransfers(
+    transactions: TransactionResponse[],
+  ): Promise<TransactionResponse[]> {
+    const filteredTxs = await this.filterNonContractTransfers(transactions);
+    return filteredTxs.filter((tx) => tx.value.gt(0) && tx.data == '0x');
   }
 
   // Calculate total fees per block
-  private calculateBlockEthTransactionTotalFeeData(
+  private async calculateBlockEthTransactionFeeData(
     blocks: BlockWithTransactions[],
-  ): BlockFeeData[] {
-    return blocks.map((block: BlockWithTransactions) => {
-      const nativeEthTxs = this.filterNativeEthTransfers(block.transactions);
+  ): Promise<BlockFeeData[]> {
+    const blockFeeData: BlockFeeData[] = [];
+    for (const block of blocks) {
+      const nativeEthTxs = await this.filterNativeEthTransfers(
+        block.transactions,
+      );
       const averageMaxPriorityFee =
         this.calculateAverageMaxPriorityFee(nativeEthTxs);
 
-      return {
+      blockFeeData.push({
         baseFee: block.baseFeePerGas || constants.Zero,
         averagePriorityFee: averageMaxPriorityFee,
-      };
-    });
+      });
+    }
+    return blockFeeData;
   }
 
   private getBlockRange(blocks: BlockWithTransactions[]): Range {
@@ -71,14 +85,8 @@ export class BlockStatsService {
     transactions: TransactionResponse[],
   ): BigNumber {
     const txCount: number = transactions.length;
-    const totalMaxPriorityFees = transactions.reduce(
-      (priorityFee: BigNumber, tx) => {
-        return tx.maxPriorityFeePerGas
-          ? tx.maxPriorityFeePerGas.add(priorityFee)
-          : constants.Zero;
-      },
-      constants.Zero,
-    );
+    const totalMaxPriorityFees =
+      this.calculateTotalMaxPriorityFee(transactions);
 
     // Avoid division by zero
     if (txCount === 0) {
@@ -86,6 +94,14 @@ export class BlockStatsService {
     }
 
     return totalMaxPriorityFees.div(txCount);
+  }
+
+  private calculateTotalMaxPriorityFee(transactions: TransactionResponse[]) {
+    return transactions.reduce((priorityFee: BigNumber, tx) => {
+      return tx.maxPriorityFeePerGas
+        ? tx.maxPriorityFeePerGas.add(priorityFee)
+        : constants.Zero;
+    }, constants.Zero);
   }
 
   // Calculate average native ETH transfer fee across blocks
@@ -102,17 +118,4 @@ export class BlockStatsService {
 
     return totalBlockFee.div(blocks.length);
   }
-
-  // private calculateAverageBlockFullness(
-  //   blocks: BlockWithTransactions[],
-  // ): number {
-  //   const totalGasUsed = blocks.reduce((sum, block) => sum + block.gasUsed, 0);
-  //   const averageBlockGasLimit =
-  //     blocks.length > 0 ? Math.floor(totalGasUsed / blocks.length) : 0;
-
-  //   // Assuming block.gasLimit represents the maximum gas allowed per block
-  //   return averageBlockGasLimit > 0
-  //     ? (totalGasUsed / BigInt(averageBlockGasLimit)) * 100
-  //     : 0;
-  // }
 }
