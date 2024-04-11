@@ -40,7 +40,7 @@ describe('BlockStatsService', () => {
         mockBlockWithTransactions.transactions,
       );
       const conditionCheck =
-        filteredTxs[0].data == '0x' && filteredTxs[0].value.gt(0);
+        filteredTxs[0].data === '0x' && filteredTxs[0].value.gt(0);
 
       expect(conditionCheck).toBe(true);
     }, 15000);

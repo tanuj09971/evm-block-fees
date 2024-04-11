@@ -11,6 +11,12 @@ import { AxiosResponse } from 'axios';
 import { BlockAnalyticsCacheService } from '../block-analytics-cache/block-analytics-cache.service';
 import { BlockCacheService } from '../block-cache/block-cache.service';
 
+interface EthBlockNumberResponse {
+  jsonrpc: string;
+  id: number;
+  result: string;
+}
+
 @Controller({ path: 'health', version: '1' })
 export class HealthController {
   web3ProxyUrl: string =
@@ -53,7 +59,7 @@ export class HealthController {
     return this.http.responseCheck(
       'eth-block-number',
       `${this.web3ProxyUrl}`,
-      (response: AxiosResponse<any>) => {
+      (response: AxiosResponse<EthBlockNumberResponse>) => {
         return response.status === 200;
       },
       {
