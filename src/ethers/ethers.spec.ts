@@ -9,6 +9,9 @@ describe('Ethers', () => {
   let configService: ConfigService;
   let wssWeb3Url: string;
   let blockInterval: number;
+  const mockBlockNumber = 19605626;
+  const mockHashValue =
+    '0x1abb0d0287ce8bc51a7613c0b25bea5a8e2c7eaefae15228c2ed0ef354eb541e';
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -75,9 +78,6 @@ describe('Ethers', () => {
 
   describe('handleBlockEvent', () => {
     it('should handle block event', async () => {
-      const mockBlockNumber = 19605626;
-      const mockHashValue =
-        '0x1abb0d0287ce8bc51a7613c0b25bea5a8e2c7eaefae15228c2ed0ef354eb541e';
       await ethersService['handleBlockEvent'](mockBlockNumber);
 
       ethersService['lastBlockNumber'] = mockBlockNumber - 1;
@@ -86,8 +86,7 @@ describe('Ethers', () => {
       );
     });
     it('should generate synthetic blocks when blockNumber is greater than expectedBlockNumber', async () => {
-      const mockBlockNumber = 19605626;
-      ethersService['lastBlockNumber'] = 19605620;
+      ethersService['lastBlockNumber'] = mockBlockNumber;
 
       jest
         .spyOn(ethersService as any, 'generateSyntheticBlocks')
@@ -118,9 +117,6 @@ describe('Ethers', () => {
 
   describe('getBlockWithTransactionsByNumber', () => {
     it('should return the latest block with transactions', async () => {
-      const mockBlockNumber = 19605626;
-      const mockHashValue =
-        '0x1abb0d0287ce8bc51a7613c0b25bea5a8e2c7eaefae15228c2ed0ef354eb541e';
       const blockWithTransactions =
         await ethersService.getBlockWithTransactionsByNumber(mockBlockNumber);
 

@@ -11,7 +11,7 @@ import { ServiceUnavailableException } from '@nestjs/common';
 
 describe('BlockAnalyticsCacheService', () => {
   let blockAnalyticsCacheService: BlockAnalyticsCacheService;
-  const mockBlockNumber: number = 19609637;
+  const mockBlockNumber = 19609637;
   let ethersProvider: Ethers;
   let configService: ConfigService;
   let blockCacheService: BlockCacheService;
@@ -52,7 +52,7 @@ describe('BlockAnalyticsCacheService', () => {
     mockStatsForLatestNBlocks = await blockStatsService['calculateStats']([
       mockBlockWithTransactions,
     ]);
-  },14000);
+  }, 14000);
 
   afterEach(async () => {
     await ethersProvider['disposeCurrentProvider']();

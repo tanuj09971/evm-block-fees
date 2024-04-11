@@ -52,10 +52,7 @@ export class Ethers {
 
     blockObservable.subscribe({
       next: async (blockNumber: number) => {
-        if (
-          this.lastBlockNumber == undefined ||
-          this.lastBlockNumber !== blockNumber
-        ) {
+        if (!this.lastBlockNumber || this.lastBlockNumber !== blockNumber) {
           this.logger.debug(`Recieved new block number: ${blockNumber}`);
           this.lastBlockNumber = blockNumber - 1; // Update lastBlockNumbers
           await this.handleBlockEvent(blockNumber);
@@ -97,6 +94,7 @@ export class Ethers {
 
   private async connectToWebsocketProvider(): Promise<ethers.providers.WebSocketProvider> {
     const wssUrl = this.configService.getOrThrow<string>('WSS_WEB3_URL');
+    console.log('TCL: Ethers -> constructor -> wssUrl', wssUrl);
     return await this.establishWebsocketConnectionWithRetries(wssUrl);
   }
 
@@ -114,6 +112,7 @@ export class Ethers {
     wssUrl: string,
   ): Promise<ethers.providers.WebSocketProvider> {
     try {
+      if (this.ethersWebsocketProvider) await this.disposeCurrentProvider();
       const provider = new ethers.providers.WebSocketProvider(wssUrl);
       return provider;
     } catch (error) {
@@ -121,12 +120,6 @@ export class Ethers {
       await this.disposeCurrentProvider(); // Cleanup on error
       throw error;
     }
-    //  finally {
-    //   // Dispose the provider even if there was no error initially
-    //   if (this.ethersWebsocketProvider) {
-    //     this.ethersWebsocketProvider.destroy(); // Or use your provider's disposal method
-    //   }
-    // }
   }
 
   //TODO do we get ready state after connection or not
@@ -199,11 +192,22 @@ export class Ethers {
     return this.ethersWebsocketProvider;
   }
 
+  @Retryable({
+    maxAttempts: Number.MAX_VALUE,
+    backOffPolicy: BackOffPolicy.ExponentialBackOffPolicy,
+    backOff: 1000,
+    exponentialOption: {
+      maxInterval: 4000,
+      multiplier: 2,
+      backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
+    },
+  })
   async getBytecode(address: string): Promise<string> {
     try {
       return await this.ethersWebsocketProvider.getCode(address);
     } catch (error) {
       console.error('Error fetching bytecode:', error);
+      await this.initializeProvider();
       throw error;
     }
   }

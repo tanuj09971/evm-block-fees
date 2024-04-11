@@ -27,7 +27,6 @@ export class HealthController {
     private blockAnalyticsCacheService: BlockAnalyticsCacheService,
   ) {}
 
-
   @Get()
   @HealthCheck()
   healthCheck(): Promise<HealthCheckResult> {

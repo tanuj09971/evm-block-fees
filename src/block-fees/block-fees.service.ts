@@ -5,18 +5,18 @@ import { BlockStat } from '../types/ethers';
 
 @Injectable()
 export class BlockFeesService {
+  blockRange: Array<number>;
   constructor(
     private blockAnalyticsCacheService: BlockAnalyticsCacheService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.blockRange =
+      this.configService.getOrThrow<Array<number>>('block_range');
+  }
 
   async calculateFeeEstimate(): Promise<BlockStat[]> {
-    const blockRange =
-      this.configService.getOrThrow<Array<number>>('block_range');
-    const promises = blockRange.map(async (blocks: number) => {
-      return this.blockAnalyticsCacheService.getStatsForLatestNBlocks(
-        blocks,
-      );
+    const promises = this.blockRange.map(async (blocks: number) => {
+      return this.blockAnalyticsCacheService.getStatsForLatestNBlocks(blocks);
     });
     return Promise.all(promises);
   }

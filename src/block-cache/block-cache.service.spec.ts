@@ -11,7 +11,7 @@ describe('BlockCacheService', () => {
   let ethersProvider: Ethers;
   let wssWeb3Url: string;
   let MAX_CACHE_SIZE: number;
-  const mockBlockNumber: number = 19609637;
+  const mockBlockNumber = 19609637;
   let mockBlockWithTransactions: BlockWithTransactions;
 
   beforeEach(async () => {

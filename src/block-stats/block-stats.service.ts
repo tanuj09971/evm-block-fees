@@ -1,11 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
 import {
   BlockWithTransactions,
   TransactionResponse,
 } from '@ethersproject/abstract-provider';
-import { BigNumber, constants, ethers } from 'ethers';
-import { BlockFeeData, BlockStat, Range, Unit } from '../types/ethers';
+import { Injectable } from '@nestjs/common';
+import { BigNumber, constants } from 'ethers';
 import { Ethers } from '../ethers/ethers';
+import { BlockFeeData, BlockStat, Range, Unit } from '../types/ethers';
 
 @Injectable()
 export class BlockStatsService {
@@ -50,7 +50,7 @@ export class BlockStatsService {
     transactions: TransactionResponse[],
   ): Promise<TransactionResponse[]> {
     const filteredTxs = await this.filterNonContractTransfers(transactions);
-    return filteredTxs.filter((tx) => tx.value.gt(0) && tx.data == '0x');
+    return filteredTxs.filter((tx) => tx.value.gt(0) && tx.data === '0x');
   }
 
   // Calculate total fees per block

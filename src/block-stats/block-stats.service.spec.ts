@@ -11,8 +11,7 @@ import { BlockFeeData, BlockStat, Unit } from '../types/ethers';
 describe('BlockStatsService', () => {
   let blockStatService: BlockStatsService;
   let ethersProvider: Ethers;
-  let configService: ConfigService;
-  const mockBlockNumber: number = 19625447;
+  const mockBlockNumber = 19625447;
   let mockBlockWithTransactions: BlockWithTransactions;
 
   beforeEach(async () => {
@@ -116,6 +115,7 @@ describe('BlockStatsService', () => {
       const blockStat: BlockStat = await blockStatService.calculateStats([
         mockBlockWithTransactions,
       ]);
+
       const mockFeeData = await blockStatService[
         'calculateBlockEthTransactionFeeData'
       ]([mockBlockWithTransactions]);

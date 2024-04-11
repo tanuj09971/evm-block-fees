@@ -175,10 +175,7 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   private hasBlockInCache(blockNumber: number): boolean {
-    if (!this.isCacheEmpty() && this.blockCache.get(blockNumber)) {
-      return true;
-    }
-    return false;
+    return !this.isCacheEmpty() && !!this.blockCache.get(blockNumber);
   }
 
   sortBlockCache(): Array<number> {
