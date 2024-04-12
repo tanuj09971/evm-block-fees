@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { BlockAnalyticsCacheService } from '../block-analytics-cache/block-analytics-cache.service';
 import { BlockFeesController } from './block-fees.controller';
 import { BlockFeesService } from './block-fees.service';
@@ -16,6 +16,7 @@ import { BlockStatsService } from '../block-stats/block-stats.service';
     Ethers,
     BlockAnalyticsCacheService,
     ConfigService,
+    Logger,
   ],
 })
 export class BlockFeesModule {}

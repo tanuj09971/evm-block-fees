@@ -86,17 +86,15 @@ describe('Ethers', () => {
       );
     });
     it('should generate synthetic blocks when blockNumber is greater than expectedBlockNumber', async () => {
-      ethersService['lastBlockNumber'] = mockBlockNumber;
+      ethersService['lastBlockNumber'] = mockBlockNumber - 5;
 
-      jest
-        .spyOn(ethersService as any, 'generateSyntheticBlocks')
-        .mockResolvedValue(undefined);
+      jest.spyOn(ethersService as any, 'generateSyntheticBlocks');
       await ethersService['handleBlockEvent'](mockBlockNumber);
       expect(ethersService['generateSyntheticBlocks']).toHaveBeenCalledWith(
         ethersService['lastBlockNumber'] + 1,
         mockBlockNumber,
       );
-    });
+    }, 30000);
   });
 
   describe('getLatestBlockNumber', () => {

@@ -6,9 +6,9 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { LRUCache } from 'lru-cache';
 import { ConfigService } from '@nestjs/config';
-import { Observable, Subject, distinct, share } from 'rxjs';
+import { LRUCache } from 'lru-cache';
+import { Observable, Subject, distinct } from 'rxjs';
 import { Ethers } from '../ethers/ethers';
 
 @Injectable()
@@ -53,20 +53,20 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     this.blockAppendedSubject.unsubscribe();
   }
 
-  /*   **Cache Empty:**  Test the scenario where the cache is initially empty. Verify that `backfillCache`:
-    *   Fetches the correct range of blocks.
-    *   Populates the cache in the correct order.
-
-*   **Partial Cache:** Test a scenario where the cache has some blocks, but not a full set. Ensure `backfillCache`:
-    *   Fetches blocks only for the missing range.
-    *   Inserts new blocks into the cache correctly.
-
-*   **Invalid Block Sequence:** Test that `backfillCache` handles out-of-order blocks.
-    *   Ensure it triggers cache refilling.
-    *   Log appropriate errors or warnings. */
+  /*   `backfillCache`:
+   *   Fetches the correct range of blocks.
+   *   Populates the cache in the correct order.
+   *   **Invalid Block Sequence:** `backfillCache` handles out-of-order blocks.
+   *   Ensure it triggers cache refilling.
+   *   Log appropriate errors or warnings. */
   private async backfillCache() {
+    this.logger.debug('backfilling blocks');
     // Update latestBlockNumber if needed:
     this.latestBlockNumber = await this.ethersProvider.getLatestBlockNumber();
+    this.logger.debug(
+      'Latest block number to backfill upto',
+      this.latestBlockNumber,
+    );
 
     // Determine startingBlock:
     const startingBlock = this.isCacheEmpty()
@@ -112,12 +112,6 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
       this.logger.debug(`Block already present in the cache: ${number}`);
       return;
     }
-    if (!this.isBlockNumberSequential(number)) {
-      this.logger.error(
-        `Unexpected block sequence, discarding block: ${number}`,
-      );
-      await this.backfillCache(); // Refill if the sequence breaks
-    }
 
     this.logger.debug('Adding block:', number);
     this.logger.debug('Adding block timestamp:', timestamp);
@@ -128,15 +122,23 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
       ttl: timestamp,
     });
     this.logger.debug('Cache size after adding:', this.blockCache.size);
-    this.blockAppendedSubject.next(blockWithTransactions);
+    this.emitIfCacheFull(blockWithTransactions);
   }
 
   getBlockAppendedObservable(): Observable<BlockWithTransactions> {
-    return this.blockAppendedSubject.asObservable();
+    return this.blockAppendedSubject
+      .asObservable()
+      .pipe(distinct((block: BlockWithTransactions) => block.number));
   }
 
   isCacheFull(): boolean {
     return this.blockCache.size === this.MAX_CACHE_SIZE;
+  }
+
+  private emitIfCacheFull(blockWithTransactions: BlockWithTransactions) {
+    if (this.isCacheFull()) {
+      this.blockAppendedSubject.next(blockWithTransactions);
+    }
   }
 
   // *   **`getLatestBlockFromCache`:** Test that it returns the correct latest block.
@@ -154,6 +156,10 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
    *   Verify it handles the case where  `n` exceeds the cache size.
    *   Test that it throws the correct exception on an invalid value of `n`. */
   getLatestNBlocks(n: number): BlockWithTransactions[] {
+    this.logger.debug(
+      'TCL: BlockCacheService -> CacheSize',
+      this.blockCache.size,
+    );
     if (n > this.MAX_CACHE_SIZE) {
       throw new BadRequestException(
         `${n} exceeds hard limit ${this.MAX_CACHE_SIZE}`,
@@ -189,7 +195,7 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     const latestBlockTimestamp = this.getLatestBlockFromCache().timestamp;
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const blockInterval =
-      this.configService.getOrThrow<number>('block_interval');
+      this.configService.getOrThrow<number>('BLOCK_INTERVAL');
     const validBlockInterval = currentTimestamp - blockInterval;
     return latestBlockTimestamp < validBlockInterval;
   }

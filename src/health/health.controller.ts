@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   HealthCheck,
   HealthCheckResult,
@@ -16,14 +17,14 @@ interface EthBlockNumberResponse {
   id: number;
   result: string;
 }
-
+@ApiTags('health')
 @Controller({ path: 'health', version: '1' })
 export class HealthController {
   web3ProxyUrl: string =
     this.configService.getOrThrow<string>('HTTPS_WEB3_URL');
   cacheKey: string;
   blockInterval: number =
-    this.configService.getOrThrow<number>('block_interval');
+    this.configService.getOrThrow<number>('BLOCK_INTERVAL');
 
   constructor(
     private health: HealthCheckService,
@@ -35,6 +36,9 @@ export class HealthController {
 
   @Get()
   @HealthCheck()
+  @ApiOperation({ summary: 'Evm Block Fees Overall health check' })
+  @ApiResponse({ status: 200, description: 'Healthy' })
+  @ApiResponse({ status: 503, description: 'Service unavailable' })
   healthCheck(): Promise<HealthCheckResult> {
     return this.health.check([
       () => this.web3ProxyHealthCheck.bind(this)(),

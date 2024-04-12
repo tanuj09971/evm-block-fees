@@ -34,6 +34,9 @@ export class Ethers {
 
   private async initializeProvider() {
     try {
+      if (this.ethersWebsocketProvider) {
+        await this.disposeCurrentProvider();
+      }
       this.ethersWebsocketProvider = await this.connectToWebsocketProvider();
       this.logger.debug('WebSocket provider initialized successfully');
     } catch (error) {
@@ -52,9 +55,8 @@ export class Ethers {
 
     blockObservable.subscribe({
       next: async (blockNumber: number) => {
-        if (!this.lastBlockNumber || this.lastBlockNumber !== blockNumber) {
+        if (this.lastBlockNumber !== blockNumber) {
           this.logger.debug(`Recieved new block number: ${blockNumber}`);
-          this.lastBlockNumber = blockNumber - 1; // Update lastBlockNumbers
           await this.handleBlockEvent(blockNumber);
         } else {
           this.logger.debug(`Skipping duplicate block number: ${blockNumber}`);
@@ -67,9 +69,10 @@ export class Ethers {
   }
 
   private async handleBlockEvent(blockNumber: number): Promise<void> {
-    const expectedBlockNumber = this.lastBlockNumber + 1;
+    let expectedBlockNumber: number = blockNumber;
+    if (this.lastBlockNumber) expectedBlockNumber = this.lastBlockNumber + 1;
 
-    if (blockNumber > expectedBlockNumber) {
+    if (blockNumber !== expectedBlockNumber) {
       await this.generateSyntheticBlocks(expectedBlockNumber, blockNumber);
       this.logger.warn(
         `Missed blocks: Generated synthetic blocks from ${expectedBlockNumber} to ${blockNumber - 1}`,
@@ -78,6 +81,7 @@ export class Ethers {
 
     this.lastBlockWithTransaction =
       await this.getBlockWithTransactionsByNumber(blockNumber);
+    this.lastBlockNumber = blockNumber;
     this.newBlockSubject.next(this.lastBlockWithTransaction);
   }
 
@@ -94,7 +98,6 @@ export class Ethers {
 
   private async connectToWebsocketProvider(): Promise<ethers.providers.WebSocketProvider> {
     const wssUrl = this.configService.getOrThrow<string>('WSS_WEB3_URL');
-    console.log('TCL: Ethers -> constructor -> wssUrl', wssUrl);
     return await this.establishWebsocketConnectionWithRetries(wssUrl);
   }
 
@@ -112,7 +115,6 @@ export class Ethers {
     wssUrl: string,
   ): Promise<ethers.providers.WebSocketProvider> {
     try {
-      if (this.ethersWebsocketProvider) await this.disposeCurrentProvider();
       const provider = new ethers.providers.WebSocketProvider(wssUrl);
       return provider;
     } catch (error) {
@@ -213,6 +215,8 @@ export class Ethers {
   }
 
   getNewBlockObservable(): Observable<BlockWithTransactions> {
-    return this.newBlockSubject.asObservable();
+    return this.newBlockSubject
+      .asObservable()
+      .pipe(distinct((block: BlockWithTransactions) => block.number));
   }
 }

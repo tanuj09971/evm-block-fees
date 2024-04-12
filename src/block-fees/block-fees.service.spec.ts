@@ -5,6 +5,9 @@ import { AppConfigModule } from '../config/config.module';
 import { BlockAnalyticsCacheService } from '../block-analytics-cache/block-analytics-cache.service';
 import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import { Ethers } from '../ethers/ethers';
+import { BlockStat } from '../types/ethers';
+import { BlockCacheService } from '../block-cache/block-cache.service';
+import { BlockStatsService } from '../block-stats/block-stats.service';
 
 describe('BlockFeesService', () => {
   let blockFeesService: BlockFeesService;
@@ -13,6 +16,7 @@ describe('BlockFeesService', () => {
   let ethersProvider: Ethers;
   const mockBlockNumber = 19625447;
   let mockBlockWithTransactions: BlockWithTransactions;
+  let mockBlockStat: BlockStat[];
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -21,6 +25,8 @@ describe('BlockFeesService', () => {
         BlockFeesService,
         ConfigService,
         BlockAnalyticsCacheService,
+        BlockCacheService,
+        BlockStatsService,
         Ethers,
       ],
     }).compile();
@@ -34,6 +40,19 @@ describe('BlockFeesService', () => {
     mockBlockWithTransactions =
       await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
     blockFeesService.blockRange = [1];
+    mockBlockStat = [
+      {
+        averageFeePerBlockInRange: '30446674301',
+        fromBlockNumber: 19625447,
+        toBlockNumber: 19625447,
+        totalBlocks: 1,
+        unit: 'wei',
+      },
+    ];
+  });
+
+  afterEach(async () => {
+    await ethersProvider['disposeCurrentProvider']();
   });
 
   it('should be defined', () => {
@@ -43,11 +62,11 @@ describe('BlockFeesService', () => {
   //Need to complete this once my quota is refilled
   describe('calculateFeeEstimate', () => {
     it('should return the stats within the block range', async () => {
-      // blockFeesService.blockRange.map(block=>{
-      //   blockAnalyticsCacheService['statsCache'].set(block, )
-
-      // })
-      // const blocksStat=
+      blockFeesService.blockRange.map((block) => {
+        blockAnalyticsCacheService['statsCache'].set(block, mockBlockStat[0]);
+      });
+      const blocksStat = await blockFeesService.calculateFeeEstimate();
+      expect(blocksStat).toEqual(mockBlockStat);
     });
   });
 });

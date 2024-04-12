@@ -50,7 +50,9 @@ export class BlockStatsService {
     transactions: TransactionResponse[],
   ): Promise<TransactionResponse[]> {
     const filteredTxs = await this.filterNonContractTransfers(transactions);
-    return filteredTxs.filter((tx) => tx.value.gt(0) && tx.data === '0x');
+    return filteredTxs.filter((tx) => {
+      tx.value.gt(0) && tx.data === '0x';
+    });
   }
 
   // Calculate total fees per block
@@ -59,6 +61,7 @@ export class BlockStatsService {
   ): Promise<BlockFeeData[]> {
     const blockFeeData: BlockFeeData[] = [];
     for (const block of blocks) {
+      console.log('TCL: block', block.number);
       const nativeEthTxs = await this.filterNativeEthTransfers(
         block.transactions,
       );

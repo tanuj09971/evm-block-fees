@@ -1,0 +1,164 @@
+[app]
+chain_id = 1
+
+# a database is optional. it is used for user authentication and accounting
+# TODO: how do we find the optimal db_max_connections? too high actually ends up being slower
+db_max_connections = 99
+# development runs cargo commands on the host and so uses "mysql://root:dev_web3_proxy@127.0.0.1:13306/dev_web3_proxy" for db_url
+# production runs inside docker and so uses "mysql://root:web3_proxy@db:3306/web3_proxy" for db_url
+db_url = "mysql://root:dev_web3_proxy@127.0.0.1:13306/dev_web3_proxy"
+
+# read-only replica useful when running the proxy in multiple regions
+db_replica_url = "mysql://root:dev_web3_proxy@127.0.0.1:13306/dev_web3_proxy"
+
+deposit_factory_contract = "0x4e3BC2054788De923A04936C6ADdB99A05B0Ea36"
+
+free_subscriptions = true
+
+kafka_urls = "127.0.0.1:19092"
+kafka_protocol = "plaintext"
+
+# a timeseries database is optional. it is used for making pretty graphs
+influxdb_host = "http://127.0.0.1:18086"
+influxdb_org = "dev_org"
+influxdb_token = "dev_web3_proxy_auth_token"
+influxdb_bucket = "dev_web3_proxy"
+
+# thundering herd protection
+# only mark a block as the head block if the sum of their soft limits is greater than or equal to min_sum_soft_limit
+min_sum_soft_limit = 2_000
+# only mark a block as the head block if the number of servers with it is great than or equal to min_synced_rpcs
+min_synced_rpcs = 2
+
+# don't serve requests if the best known block is >60 seconds old
+max_head_block_age = 60
+
+# redis is optional. it is used for rate limits set by `hard_limit`
+# TODO: how do we find the optimal redis_max_connections? too high actually ends up being slower
+volatile_redis_max_connections = 300
+# development runs cargo commands on the host and so uses "redis://127.0.0.1:16379/" for volatile_redis_url
+# production runs inside docker and so uses "redis://redis:6379/" for volatile_redis_url
+volatile_redis_url = "redis://127.0.0.1:16379/"
+
+# redirect_public_url is optional
+redirect_public_url = "https://llamanodes.com/public-rpc"
+# redirect_rpc_key_url is optional
+# it only does something if db_url is set
+redirect_rpc_key_url = "https://llamanodes.com/dashboard/keys?key={{rpc_key_id}}"
+
+# sentry is optional. it is used for browsing error logs
+# sentry_url = "https://SENTRY_KEY_A.ingest.sentry.io/SENTRY_KEY_B"
+
+stripe_api_key = ""
+
+# public limits are when no key is used. these are instead grouped by ip
+# 0 = block all public requests
+public_max_concurrent_requests = 3
+# 0 = block all public requests
+public_requests_per_period = 200
+login_domain = "llamanodes.com"
+
+# 10GB of cache
+response_cache_max_bytes = 10_000_000_000
+
+# allowed_origin_requests_per_period changes the min_sum_soft_limit for requests with the specified (AND SPOOFABLE) Origin header
+# origins not in the list for requests without an rpc_key will use public_requests_per_period instead
+[app.allowed_origin_requests_per_period]
+"https://chainlist.org" = 1_000
+
+[balanced_rpcs]
+
+    [balanced_rpcs.llamanodes]
+    display_name = "LlamaNodes"
+    block_data_limit = "archive"
+    http_url = "https://ethereum.llamarpc.com"
+    ws_url = "wss://ethereum.llamarpc.com"
+    
+    [balanced_rpcs.publicnode]
+    display_name = "PublicNode"
+    block_data_limit = "archive"
+    http_url = "https://ethereum-rpc.publicnode.com"
+    ws_url = "wss://ethereum-rpc.publicnode.com"    
+
+    [balanced_rpcs.ankr]
+    display_name = "Ankr"
+    block_data_limit = 64
+    http_url = "https://rpc.ankr.com/eth"
+    soft_limit = 1_000
+
+    [balanced_rpcs.cloudflare]
+    display_name = "Cloudflare"
+    http_url = "https://cloudflare-eth.com"
+    soft_limit = 1_000
+
+    [balanced_rpcs.blastapi]
+    display_name = "Blast"
+    http_url = "https://eth-mainnet.public.blastapi.io"
+    soft_limit = 1_000
+
+    [balanced_rpcs.mycryptoapi]
+    display_name = "MyCrypto"
+    disabled = true
+    http_url = "https://api.mycryptoapi.com/eth"
+    soft_limit = 1_000
+
+    [balanced_rpcs.pokt-v1]
+    display_name = "Pokt #1"
+    http_url = "https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79"
+    soft_limit = 500
+
+    [balanced_rpcs.pokt]
+    display_name = "Pokt #2"
+    http_url = "https://eth-rpc.gateway.pokt.network"
+    soft_limit = 500
+
+    [balanced_rpcs.linkpool]
+    display_name = "Linkpool"
+    http_url = "https://main-rpc.linkpool.io"
+    soft_limit = 500
+
+    [balanced_rpcs.runonflux]
+    display_name = "Run on Flux (light)"
+    http_url = "https://ethereumnodelight.app.runonflux.io"
+    soft_limit = 1_000
+
+    # load balanced light nodes are not very reliable
+    [balanced_rpcs.linkpool-light]
+    display_name = "Linkpool (light)"
+    disabled = true
+    http_url = "https://main-light.eth.linkpool.io"
+    soft_limit = 100
+
+[private_rpcs]
+
+# these worked well on ETH 1.0, but 2.0 ends up not working as well. we will re-assess as more validators turn on private transactions
+
+    [private_rpcs.eden]
+    disabled = true
+    display_name = "Eden network"
+    http_url = "https://api.edennetwork.io/v1/"
+    soft_limit = 1_805
+
+    [private_rpcs.eden_beta]
+    disabled = true
+    display_name = "Eden network beta"
+    http_url = "https://api.edennetwork.io/v1/beta"
+    soft_limit = 5_861
+
+    [private_rpcs.ethermine]
+    disabled = true
+    display_name = "Ethermine"
+    http_url = "https://rpc.ethermine.org"
+    soft_limit = 5_861
+
+    [private_rpcs.flashbots]
+    disabled = true
+    display_name = "Flashbots Fast"
+    http_url = "https://rpc.flashbots.net/fast"
+    soft_limit = 7_074
+
+    [private_rpcs.securerpc]
+    disabled = true
+    display_name = "SecureRPC"
+    http_url = "https://gibson.securerpc.com/v1"
+    soft_limit = 4_560

@@ -29,7 +29,5 @@ import { HealthModule } from './health/health.module';
     BlockAnalyticsCacheModule,
     BlockFeesModule,
   ],
-  controllers: [],
-  providers: [],
 })
 export class AppModule {}

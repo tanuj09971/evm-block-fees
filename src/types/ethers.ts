@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { BigNumber } from 'ethers';
 
 export interface BlockEvent {
@@ -11,18 +12,26 @@ export enum Unit {
   Ether = 'ether',
 }
 
-export interface BlockStat {
+export class BlockStat {
+  @ApiProperty()
   averageFeePerBlockInRange: string;
-  // lastBlockEthTransferFee:BigNumber;
-  // last5BlocksEthTransferFee:BigNumber;
-  // last30BlocksEthTransferFee:BigNumber;
+
+  @ApiProperty()
   unit: string;
+
+  @ApiProperty({ required: false })
   optimalFee?: BigNumber; // Placeholder for future implementation
-  // Difficulty to estimate mempool size accurately; omit for now
-  // mempoolSize: BigNumber,
+
+  @ApiProperty({ required: false })
   blockFullness?: BigNumber; // (0 - 100 representing percentage full)
+
+  @ApiProperty()
   fromBlockNumber: number;
+
+  @ApiProperty()
   toBlockNumber: number;
+
+  @ApiProperty()
   totalBlocks: number;
 }
 

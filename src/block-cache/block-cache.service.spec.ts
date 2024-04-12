@@ -95,7 +95,6 @@ describe('BlockCacheService', () => {
 
   describe('getLatestBlockFromCache', () => {
     it('should return the latest block stored in cache', async () => {
-      console.log('TCL: mockBlockWithTransactions', mockBlockWithTransactions);
       blockCacheService['blockCache'].set(
         mockBlockNumber,
         mockBlockWithTransactions,
