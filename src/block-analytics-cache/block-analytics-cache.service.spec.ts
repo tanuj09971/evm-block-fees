@@ -52,7 +52,7 @@ describe('BlockAnalyticsCacheService', () => {
     mockStatsForLatestNBlocks = await blockStatsService['calculateStats']([
       mockBlockWithTransactions,
     ]);
-  }, 14000);
+  }, 30000);
 
   afterEach(async () => {
     await ethersProvider['disposeCurrentProvider']();

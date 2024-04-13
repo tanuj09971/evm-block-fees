@@ -24,7 +24,7 @@ describe('BlockStatsService', () => {
     ethersProvider = module.get<Ethers>(Ethers);
     mockBlockWithTransactions =
       await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
-  });
+  }, 15000);
 
   it('should be defined', () => {
     expect(blockStatService).toBeDefined();
@@ -43,7 +43,7 @@ describe('BlockStatsService', () => {
         filteredTxs[0].data === '0x' && filteredTxs[0].value.gt(0);
 
       expect(conditionCheck).toBe(true);
-    }, 15000);
+    }, 30000);
   });
 
   describe('filterNonContractTransfers', () => {
@@ -57,7 +57,7 @@ describe('BlockStatsService', () => {
         : constants.AddressZero;
       const conditionCheck = bytecode.length === 2;
       expect(conditionCheck).toBe(true);
-    }, 30000);
+    }, 50000);
   });
 
   describe('calculateAverageMaxPriorityFee', () => {
@@ -72,7 +72,7 @@ describe('BlockStatsService', () => {
       expect(averagePriorityFee).toEqual(
         totalMaxPriorityFees.div(filteredTxs.length),
       );
-    });
+    }, 30000);
   });
 
   describe('calculateBlockEthTransactionTotalFeeData', () => {

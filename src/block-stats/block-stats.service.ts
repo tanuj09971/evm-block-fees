@@ -32,13 +32,19 @@ export class BlockStatsService {
   private async filterNonContractTransfers(
     transactions: TransactionResponse[],
   ): Promise<TransactionResponse[]> {
-    const filteredTransactions = await Promise.all(
-      transactions.map(async (tx) => {
-        if (tx.to) {
+    const filteredTransactionsPromises = [];
+    for (const tx of transactions) {
+      if (tx.to) {
+        try {
           const bytecode = await this.ethersProvider.getBytecode(tx.to);
-          if (bytecode.length === 2) return tx;
+          if (bytecode.length === 2) filteredTransactionsPromises.push(tx);
+        } catch (error) {
+          throw Error(`filterNonContractTransfers: ${error}`);
         }
-      }),
+      }
+    }
+    const filteredTransactions = await Promise.all(
+      filteredTransactionsPromises,
     );
     return filteredTransactions.filter(
       (tx): tx is TransactionResponse => tx !== undefined,
@@ -50,9 +56,7 @@ export class BlockStatsService {
     transactions: TransactionResponse[],
   ): Promise<TransactionResponse[]> {
     const filteredTxs = await this.filterNonContractTransfers(transactions);
-    return filteredTxs.filter((tx) => {
-      tx.value.gt(0) && tx.data === '0x';
-    });
+    return filteredTxs.filter((tx) => tx.value.gt(0) && tx.data === '0x');
   }
 
   // Calculate total fees per block
@@ -61,7 +65,6 @@ export class BlockStatsService {
   ): Promise<BlockFeeData[]> {
     const blockFeeData: BlockFeeData[] = [];
     for (const block of blocks) {
-      console.log('TCL: block', block.number);
       const nativeEthTxs = await this.filterNativeEthTransfers(
         block.transactions,
       );

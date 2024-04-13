@@ -12,6 +12,7 @@ describe('Ethers', () => {
   const mockBlockNumber = 19605626;
   const mockHashValue =
     '0x1abb0d0287ce8bc51a7613c0b25bea5a8e2c7eaefae15228c2ed0ef354eb541e';
+  const mockAddress = '0xd253a785d00f9551bfd3098e2dc2b95cf1a7cd53';
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -22,12 +23,12 @@ describe('Ethers', () => {
     ethersService = module.get<Ethers>(Ethers);
     configService = module.get<ConfigService>(ConfigService);
     wssWeb3Url = configService.getOrThrow<string>('WSS_WEB3_URL');
-    blockInterval = configService.getOrThrow<number>('block_interval');
+    blockInterval = configService.getOrThrow<number>('BLOCK_INTERVAL');
     ethersService['ethersWebsocketProvider'] =
       await ethersService['establishWebsocketConnectionWithRetries'](
         wssWeb3Url,
       );
-  });
+  },15000);
 
   afterEach(async () => {
     await ethersService['disposeCurrentProvider']();
@@ -41,7 +42,7 @@ describe('Ethers', () => {
     it('should establish a connection and successfully call getBlockNumber', async () => {
       const blockNumber = await ethersService.getLatestBlockNumber();
       expect(typeof blockNumber).toBe('number');
-    });
+    }, 14000);
     it('should throw an error if the connection fails', async () => {
       if (!ethersService['ethersWebsocketProvider']) {
         await expect(ethersService.getLatestBlockNumber()).rejects.toThrow(
@@ -72,7 +73,7 @@ describe('Ethers', () => {
 
       const latestBlockNumber = await ethersService.getLatestBlockNumber();
 
-      expect(ethersService['lastBlockNumber'] + 1).toBe(latestBlockNumber);
+      expect(ethersService['lastBlockNumber']+1).toBe(latestBlockNumber);
     }, 14000);
   });
 
@@ -86,12 +87,13 @@ describe('Ethers', () => {
       );
     });
     it('should generate synthetic blocks when blockNumber is greater than expectedBlockNumber', async () => {
-      ethersService['lastBlockNumber'] = mockBlockNumber - 5;
+      const expectedBlockNumber = mockBlockNumber - 5;
+      ethersService['lastBlockNumber'] = expectedBlockNumber;
 
       jest.spyOn(ethersService as any, 'generateSyntheticBlocks');
       await ethersService['handleBlockEvent'](mockBlockNumber);
       expect(ethersService['generateSyntheticBlocks']).toHaveBeenCalledWith(
-        ethersService['lastBlockNumber'] + 1,
+        expectedBlockNumber + 1,
         mockBlockNumber,
       );
     }, 30000);
@@ -128,6 +130,16 @@ describe('Ethers', () => {
       await expect(
         ethersService.getBlockWithTransactionsByNumber(212),
       ).rejects.toThrowError();
+    });
+  });
+
+  describe('getByteCode', () => {
+    it('should return the code for the address', async () => {
+      const testCode =
+        await ethersService['ethersWebsocketProvider'].getCode(mockAddress);
+      const code = await ethersService.getBytecode(mockAddress);
+
+      expect(testCode).toEqual(code);
     });
   });
 });

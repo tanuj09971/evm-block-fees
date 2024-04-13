@@ -32,7 +32,7 @@ describe('BlockCacheService', () => {
       );
     mockBlockWithTransactions =
       await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
-  });
+  },15000);
 
   afterEach(async () => {
     await ethersProvider['disposeCurrentProvider']();

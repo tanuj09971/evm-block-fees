@@ -31,6 +31,14 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     await this.backfillCache();
+    this.subscribeToNewBlockWithTransactionsEvent();
+  }
+
+  async onModuleDestroy() {
+    this.blockAppendedSubject.unsubscribe();
+  }
+
+  private subscribeToNewBlockWithTransactionsEvent() {
     this.newBlockObservable = this.ethersProvider
       .getNewBlockObservable()
       .pipe(
@@ -47,10 +55,6 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
 
       await this.appendBlockToCache(blockWithTransactions);
     });
-  }
-
-  async onModuleDestroy() {
-    this.blockAppendedSubject.unsubscribe();
   }
 
   /*   `backfillCache`:

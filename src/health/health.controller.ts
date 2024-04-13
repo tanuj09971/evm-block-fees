@@ -85,7 +85,7 @@ export class HealthController {
   private analyticsCacheHealthCheck = async (
     n: number,
   ): Promise<HealthIndicatorResult> => {
-    const status = (await this.checkAnalyticsCache(n)) ? 'up' : 'down';
+    const status = this.checkAnalyticsCache(n) ? 'up' : 'down';
     return {
       [`analytics-cache-${n}-block`]: {
         status,

@@ -9,17 +9,13 @@ export class BlockFeesService {
   constructor(
     private blockAnalyticsCacheService: BlockAnalyticsCacheService,
     private readonly configService: ConfigService,
-    private logger: Logger = new Logger(BlockFeesService.name),
+    private readonly logger: Logger = new Logger(BlockFeesService.name),
   ) {
     this.blockRange = JSON.parse(this.configService.getOrThrow('BLOCK_RANGE'));
   }
 
   async calculateFeeEstimate(): Promise<BlockStat[]> {
     try {
-      this.logger.log(
-        'TCL: BlockFeesService -> this.blockRange',
-        this.blockRange,
-      );
       const promises = this.blockRange.map(async (blocks: number) => {
         return this.blockAnalyticsCacheService.getStatsForLatestNBlocks(blocks);
       });

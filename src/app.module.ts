@@ -1,5 +1,5 @@
 import { CacheModule } from '@nestjs/cache-manager';
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { BlockAnalyticsCacheModule } from './block-analytics-cache/block-analytics-cache.module';
 import { BlockCacheModule } from './block-cache/block-cache.module';
@@ -29,5 +29,7 @@ import { HealthModule } from './health/health.module';
     BlockAnalyticsCacheModule,
     BlockFeesModule,
   ],
+  providers: [Logger],
+  exports: [Logger],
 })
 export class AppModule {}

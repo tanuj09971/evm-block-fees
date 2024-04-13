@@ -2,7 +2,7 @@ import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
-import { Observable, Subject, distinct, fromEvent } from 'rxjs';
+import { Observable, Subject, catchError, distinct, fromEvent } from 'rxjs';
 import {
   BackOffPolicy,
   ExponentialBackoffStrategy,
@@ -50,7 +50,11 @@ export class Ethers {
       this.ethersWebsocketProvider,
       'block',
     ).pipe(
-      distinct((blockNumber: number) => blockNumber), // Filter duplicates
+      distinct((blockNumber: number) => blockNumber),
+      catchError((error) => {
+        this.logger.error('Error in block observable:', error);
+        return this.handleWebSocketError(); // Handle other errors as before
+      }),
     );
 
     blockObservable.subscribe({
@@ -62,10 +66,32 @@ export class Ethers {
           this.logger.debug(`Skipping duplicate block number: ${blockNumber}`);
         }
       },
-      error: (err) => {
+      error: async (err) => {
         this.logger.error('Error in block observable:', err);
+        await this.handleWebSocketError(); // Handle the error
       },
     });
+  }
+
+  @Retryable({
+    maxAttempts: Number.MAX_VALUE,
+    backOffPolicy: BackOffPolicy.ExponentialBackOffPolicy,
+    backOff: 1000,
+    exponentialOption: {
+      maxInterval: 4000,
+      multiplier: 2,
+      backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
+    },
+  })
+  private async handleWebSocketError() {
+    try {
+      await this.disposeCurrentProvider(); // Close the failed connection
+      await this.initializeProvider(); // Attempt to re-establish connection
+      await this.setOnBlockListener(); // Set up the listener again
+    } catch (error) {
+      this.logger.error('Error recovering from WebSocket failure:', error);
+      throw error;
+    }
   }
 
   private async handleBlockEvent(blockNumber: number): Promise<void> {
@@ -75,7 +101,7 @@ export class Ethers {
     if (blockNumber !== expectedBlockNumber) {
       await this.generateSyntheticBlocks(expectedBlockNumber, blockNumber);
       this.logger.warn(
-        `Missed blocks: Generated synthetic blocks from ${expectedBlockNumber} to ${blockNumber - 1}`,
+        `Missed blocks: Generated synthetic blocks from ${expectedBlockNumber} to ${blockNumber}`,
       );
     }
 
@@ -124,7 +150,6 @@ export class Ethers {
     }
   }
 
-  //TODO do we get ready state after connection or not
   getConnectionState(): ConnectionStatus {
     return this.ethersWebsocketProvider?.websocket
       .readyState as ConnectionStatus;

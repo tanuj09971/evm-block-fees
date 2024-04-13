@@ -54,12 +54,19 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
   private async updateStatsCache(): Promise<void> {
     // Calculate stats for relevant ranges (1, 5, ... 30)
     this.logger.debug('Starting stats cache update');
-    this.statsForNBlocks.forEach(async (n: number) => {
+    for (const n of this.statsForNBlocks) {
       const latestNBlocks = this.blockCacheService.getLatestNBlocks(n);
-      const statsForLatestNBlocks =
-        await this.blockStatService.calculateStats(latestNBlocks); // Delegate calculation
-      this.statsCache.set(n, statsForLatestNBlocks); // Update cache
-    });
+      try {
+        const statsForLatestNBlocks =
+          await this.blockStatService.calculateStats(latestNBlocks);
+
+        this.statsCache.set(n, statsForLatestNBlocks); // Update cache
+      } catch (error) {
+        this.logger.error(
+          `Error calculating stats for ${n} blocks: ${error.message}`,
+        );
+      }
+    }
   }
 
   private isStatsCacheEmpty(): boolean {

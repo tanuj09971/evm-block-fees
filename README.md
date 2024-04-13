@@ -51,7 +51,7 @@ Make sure you have Docker installed on your machine. If not, you can download an
 
 ### Optimized Web3 Interactions
 
-- I've integrated Web3_proxy to distribute requests across multiple Web3 servers, preventing any single server from being overwhelmed. This enhances the reliability and scalability of my Web3 interactions. All the RPCs I am using are listed in the `example.toml` file
+- I've integrated Web3_proxy to distribute requests across multiple Web3 servers, preventing any single server from being overwhelmed. This enhances the reliability and scalability of my Web3 interactions. All the RPCs I am using are listed in the `web3-proxy.toml` file
 
 ### Real-time Block Data Handling
 
@@ -79,7 +79,9 @@ Make sure you have Docker installed on your machine. If not, you can download an
 ## API for Block Fee Estimation
 
 - The /block-fees/estimate API is exposed from the block fees controller.
+- It takes a couple of minutes to fill the blocks upto max range of blocks.
 - This API leverages the block fees service, which retrieves pre-calculated stats from the statsCache in `O(1)` time, ensuring quick block fee estimations.
+- Swagger for the api is available on the route `/api`
 
 ## Folder structure
 

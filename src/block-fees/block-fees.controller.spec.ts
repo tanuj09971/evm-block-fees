@@ -10,6 +10,7 @@ import { BlockStatsService } from '../block-stats/block-stats.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import { BlockStat } from '../types/ethers';
+import { Logger } from '@nestjs/common';
 
 describe('BlockFeesController', () => {
   let controller: BlockFeesController;
@@ -41,6 +42,7 @@ describe('BlockFeesController', () => {
         BlockAnalyticsCacheService,
         BlockCacheService,
         Ethers,
+        Logger
       ],
     }).compile();
 

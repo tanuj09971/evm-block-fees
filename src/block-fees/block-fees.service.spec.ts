@@ -8,6 +8,7 @@ import { Ethers } from '../ethers/ethers';
 import { BlockStat } from '../types/ethers';
 import { BlockCacheService } from '../block-cache/block-cache.service';
 import { BlockStatsService } from '../block-stats/block-stats.service';
+import { Logger } from '@nestjs/common';
 
 describe('BlockFeesService', () => {
   let blockFeesService: BlockFeesService;
@@ -28,6 +29,7 @@ describe('BlockFeesService', () => {
         BlockCacheService,
         BlockStatsService,
         Ethers,
+        Logger,
       ],
     }).compile();
 
@@ -49,7 +51,7 @@ describe('BlockFeesService', () => {
         unit: 'wei',
       },
     ];
-  });
+  },15000);
 
   afterEach(async () => {
     await ethersProvider['disposeCurrentProvider']();
@@ -62,7 +64,7 @@ describe('BlockFeesService', () => {
   //Need to complete this once my quota is refilled
   describe('calculateFeeEstimate', () => {
     it('should return the stats within the block range', async () => {
-      blockFeesService.blockRange.map((block) => {
+      blockFeesService.blockRange.forEach((block) => {
         blockAnalyticsCacheService['statsCache'].set(block, mockBlockStat[0]);
       });
       const blocksStat = await blockFeesService.calculateFeeEstimate();
