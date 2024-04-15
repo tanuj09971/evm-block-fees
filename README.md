@@ -85,7 +85,7 @@ Make sure you have Docker installed on your machine. If not, you can download an
 ## API for Block Fee Estimation
 
 - The (`src/block-fees`) is a module which exposes an API for block stats.
-- This API leverages the (`src/block-analytics-cache`), which retrieves pre-calculated stats from the statsCache in `O(1)` time, ensuring quick block fee estimations.
+- This API leverages the (`src/block-analytics-cache`), it retrieves pre-calculated stats from the statsCache in `O(1)` time, ensuring quick block fee estimations.
 - Swagger for the api is available on the route `/api`
 
 ## Folder structure
