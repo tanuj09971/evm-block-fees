@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BlockAnalyticsCacheService } from '../block-analytics-cache/block-analytics-cache.service';
-import { BlockStat } from '../types/ethers';
+import { BlockStat } from './dto/block-stat.dto';
 
 @Injectable()
 export class BlockFeesService {
@@ -14,15 +14,15 @@ export class BlockFeesService {
     this.blockRange = JSON.parse(this.configService.getOrThrow('BLOCK_RANGE'));
   }
 
-  async calculateFeeEstimate(): Promise<BlockStat[]> {
+  calculateFeeEstimate(): BlockStat[] {
     try {
-      const promises = this.blockRange.map(async (blocks: number) => {
-        return this.blockAnalyticsCacheService.getStatsForLatestNBlocks(blocks);
-      });
-      return Promise.all(promises);
+      const feeEstimates: BlockStat[] = this.blockRange.map((blocks: number) =>
+        this.blockAnalyticsCacheService.getStatsForLatestNBlocks(blocks),
+      );
+      return feeEstimates;
     } catch (error) {
       this.logger.error(error);
-      throw error;
+      throw error; // Re-throw for potential handling at a higher level
     }
   }
 }

@@ -8,14 +8,7 @@ import {
   ExponentialBackoffStrategy,
   Retryable,
 } from 'typescript-retry-decorator';
-
-enum ConnectionStatus {
-  Unknown = -1,
-  Connecting = 0,
-  Open = 1,
-  Closing = 2,
-  Closed = 3,
-}
+import { ConnectionStatus } from '../types/ethers';
 
 @Injectable()
 export class Ethers {
@@ -24,6 +17,7 @@ export class Ethers {
   private newBlockSubject = new Subject<BlockWithTransactions>(); // For emitting new block numbers
   private lastBlockNumber: number;
   private lastBlockWithTransaction: BlockWithTransactions;
+  private previousBlockNumber: number;
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -59,8 +53,12 @@ export class Ethers {
 
     blockObservable.subscribe({
       next: async (blockNumber: number) => {
-        if (this.lastBlockNumber !== blockNumber) {
+        if (
+          !this.previousBlockNumber ||
+          this.previousBlockNumber !== blockNumber
+        ) {
           this.logger.debug(`Recieved new block number: ${blockNumber}`);
+          this.previousBlockNumber = blockNumber;
           await this.handleBlockEvent(blockNumber);
         } else {
           this.logger.debug(`Skipping duplicate block number: ${blockNumber}`);
@@ -233,15 +231,19 @@ export class Ethers {
     try {
       return await this.ethersWebsocketProvider.getCode(address);
     } catch (error) {
-      console.error('Error fetching bytecode:', error);
+      this.logger.error('Error fetching bytecode:', error);
       await this.initializeProvider();
       throw error;
     }
   }
 
   getNewBlockObservable(): Observable<BlockWithTransactions> {
-    return this.newBlockSubject
-      .asObservable()
-      .pipe(distinct((block: BlockWithTransactions) => block.number));
+    return this.newBlockSubject.asObservable().pipe(
+      distinct((block: BlockWithTransactions) => block.number),
+      catchError((error) => {
+        this.logger.error('Error in block observable:', error);
+        throw error; // Handle other errors as before
+      }),
+    );
   }
 }

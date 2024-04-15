@@ -1,13 +1,12 @@
+import { ServiceUnavailableException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { BlockAnalyticsCacheService } from './block-analytics-cache.service';
-import { BlockWithTransactions } from '@ethersproject/abstract-provider';
-import { Ethers } from '../ethers/ethers';
 import { BlockCacheService } from '../block-cache/block-cache.service';
 import { BlockStatsService } from '../block-stats/block-stats.service';
-import { ConfigService } from '@nestjs/config';
 import { AppConfigModule } from '../config/config.module';
-import { BlockStat } from '../types/ethers';
-import { ServiceUnavailableException } from '@nestjs/common';
+import { Ethers } from '../ethers/ethers';
+import { BlockAnalyticsCacheService } from './block-analytics-cache.service';
+import { BlockStat } from '../block-fees/dto/block-stat.dto';
 
 describe('BlockAnalyticsCacheService', () => {
   let blockAnalyticsCacheService: BlockAnalyticsCacheService;
@@ -16,8 +15,8 @@ describe('BlockAnalyticsCacheService', () => {
   let configService: ConfigService;
   let blockCacheService: BlockCacheService;
   let blockStatsService: BlockStatsService;
-  let mockBlockWithTransactions: BlockWithTransactions;
   let mockStatsForLatestNBlocks: BlockStat;
+  const N = 5;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -38,21 +37,23 @@ describe('BlockAnalyticsCacheService', () => {
     configService = module.get<ConfigService>(ConfigService);
     blockStatsService = module.get<BlockStatsService>(BlockStatsService);
     ethersProvider = module.get<Ethers>(Ethers);
-    mockBlockWithTransactions =
-      await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
 
-    blockCacheService['blockCache'].set(
-      mockBlockNumber,
-      mockBlockWithTransactions,
-      {
-        ttl: mockBlockWithTransactions.timestamp,
-      },
+    let blockWithTransactionsArray = [];
+    for (let i = mockBlockNumber - N - 1; i <= mockBlockNumber; i++) {
+      const blockWithTransactions =
+        await ethersProvider.getBlockWithTransactionsByNumber(i);
+
+      blockCacheService['blockCache'].set(i, blockWithTransactions, {
+        ttl: blockWithTransactions.timestamp,
+      });
+      blockWithTransactionsArray.push(blockWithTransactions);
+    }
+    mockStatsForLatestNBlocks = await blockStatsService['calculateStats'](
+      blockWithTransactionsArray,
     );
+
     await blockAnalyticsCacheService['updateStatsCache']();
-    mockStatsForLatestNBlocks = await blockStatsService['calculateStats']([
-      mockBlockWithTransactions,
-    ]);
-  }, 30000);
+  }, 30 * 1000);
 
   afterEach(async () => {
     await ethersProvider['disposeCurrentProvider']();
@@ -64,8 +65,6 @@ describe('BlockAnalyticsCacheService', () => {
 
   describe('updateStatsCache', () => {
     it('should update stats in cache for the latest N blocks', async () => {
-      const N = 1;
-
       expect(
         blockAnalyticsCacheService['statsCache'].get(N)
           ?.averageFeePerBlockInRange,
@@ -75,7 +74,6 @@ describe('BlockAnalyticsCacheService', () => {
 
   describe('getStatsForLatestNBlocks', () => {
     it('should return the stats for latest N blocks', async () => {
-      const N = 1;
       const latestStats =
         blockAnalyticsCacheService.getStatsForLatestNBlocks(N);
 

@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { Observable } from 'rxjs';
 import { BlockCacheService } from '../block-cache/block-cache.service';
 import { BlockStatsService } from '../block-stats/block-stats.service';
-import { BlockStat } from '../types/ethers';
+import { BlockStat } from '../block-fees/dto/block-stat.dto';
 
 @Injectable()
 export class BlockAnalyticsCacheService implements OnModuleInit {
@@ -17,6 +17,7 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
   private readonly statsForNBlocks: Array<number>;
   private logger: Logger = new Logger(BlockAnalyticsCacheService.name);
   private newBlockWithTransactionObservable: Observable<BlockWithTransactions>;
+  private previousBlockNumber: number;
 
   constructor(
     private readonly configService: ConfigService,
@@ -32,18 +33,28 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
     this.newBlockWithTransactionObservable =
       this.blockCacheService.getBlockAppendedObservable();
 
-    this.newBlockWithTransactionObservable.subscribe(
-      async (block: BlockWithTransactions) => {
+    this.newBlockWithTransactionObservable.subscribe({
+      next: async (block: BlockWithTransactions) => {
         this.logger.debug(
           `Block received in BlockAnalyticsCacheService: ${block.number}`,
         );
-        try {
-          await this.updateStatsCache();
-        } catch (error) {
-          this.logger.error(`Error updating stats cache: ${error.message}`); // Log errors
+        if (this.previousBlockNumber !== block.number) {
+          try {
+            await this.updateStatsCache();
+          } catch (error) {
+            this.logger.error(`Error updating stats cache: ${error.message}`);
+          }
+        } else {
+          this.logger.error(
+            `Skipping stats cache update for block ${block.number}`,
+          );
         }
       },
-    );
+      error: (error) => {
+        this.logger.error(error);
+        throw error; // Re-throw for potential handling at a higher level
+      },
+    });
   }
 
   getStatsForLatestNBlocks(n: number): BlockStat {

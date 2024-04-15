@@ -32,7 +32,7 @@ describe('BlockCacheService', () => {
       );
     mockBlockWithTransactions =
       await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
-  },15000);
+  }, 15000);
 
   afterEach(async () => {
     await ethersProvider['disposeCurrentProvider']();
@@ -49,7 +49,7 @@ describe('BlockCacheService', () => {
         .mockResolvedValueOnce(mockBlockNumber);
       const latestBlockWithTransactions =
         await ethersProvider.getBlockWithTransactionsByNumber(
-          mockBlockNumber - 2,
+          mockBlockNumber - 29,
         );
 
       blockCacheService['blockCache'].set(
@@ -58,11 +58,10 @@ describe('BlockCacheService', () => {
         { ttl: latestBlockWithTransactions.timestamp },
       );
       await blockCacheService['backfillCache']();
-
       const expectedCacheSize =
         mockBlockNumber - latestBlockWithTransactions.number + 1;
       expect(blockCacheService['blockCache'].size).toEqual(expectedCacheSize);
-    }, 10000);
+    }, 30000);
   });
 
   describe('appendBlockToCache', () => {
@@ -151,7 +150,7 @@ describe('BlockCacheService', () => {
         mockBlockWithTransactions,
         { ttl: mockBlockWithTransactions.timestamp },
       );
-
+      
       expect(blockCacheService.isCacheStale()).toEqual(true);
     });
   });

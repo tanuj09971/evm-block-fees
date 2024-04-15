@@ -2,8 +2,8 @@ import { CacheInterceptor } from '@nestjs/cache-manager';
 import { Controller, Get, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { BlockStat } from '../types/ethers';
 import { BlockFeesService } from './block-fees.service';
+import { BlockStat } from './dto/block-stat.dto';
 
 @ApiTags('Block Fees')
 @UseInterceptors(CacheInterceptor)
@@ -15,10 +15,10 @@ export class BlockFeesController {
   @Get('estimate')
   @ApiOkResponse({
     description: 'Returns fee estimates for blocks',
-    type: BlockStat, // Specify the response type
-    isArray: true, // Indicates the response is an array of BlockStat objects
+    type: BlockStat,
+    isArray: true,
   })
-  async getFeeEstimate(): Promise<BlockStat[]> {
-    return await this.blockFeesService.calculateFeeEstimate();
+  getFeeEstimate(): BlockStat[] {
+    return this.blockFeesService.calculateFeeEstimate();
   }
 }

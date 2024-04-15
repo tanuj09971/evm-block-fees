@@ -5,10 +5,10 @@ import { AppConfigModule } from '../config/config.module';
 import { BlockAnalyticsCacheService } from '../block-analytics-cache/block-analytics-cache.service';
 import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import { Ethers } from '../ethers/ethers';
-import { BlockStat } from '../types/ethers';
 import { BlockCacheService } from '../block-cache/block-cache.service';
 import { BlockStatsService } from '../block-stats/block-stats.service';
 import { Logger } from '@nestjs/common';
+import { BlockStat } from './dto/block-stat.dto';
 
 describe('BlockFeesService', () => {
   let blockFeesService: BlockFeesService;

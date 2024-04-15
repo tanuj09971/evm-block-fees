@@ -8,13 +8,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LRUCache } from 'lru-cache';
-import { Observable, Subject, distinct } from 'rxjs';
+import { Observable, Subject, catchError, distinct } from 'rxjs';
 import { Ethers } from '../ethers/ethers';
 
 @Injectable()
 export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   private blockCache: LRUCache<number, BlockWithTransactions>;
-  private readonly MAX_CACHE_SIZE;
+  private readonly MAX_CACHE_SIZE: number;
+  private readonly BLOCK_INTERVAL: number;
   private newBlockObservable: Observable<BlockWithTransactions>;
   private readonly logger = new Logger(BlockCacheService.name);
   private blockAppendedSubject = new Subject<BlockWithTransactions>();
@@ -26,7 +27,12 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   ) {
     this.MAX_CACHE_SIZE =
       this.configService.getOrThrow<number>('MAX_CACHE_SIZE');
-    this.blockCache = new LRUCache({ max: Number(this.MAX_CACHE_SIZE) }); // Initialize LRU cache
+    this.BLOCK_INTERVAL =
+      this.configService.getOrThrow<number>('BLOCK_INTERVAL');
+    this.blockCache = new LRUCache({
+      max: Number(this.MAX_CACHE_SIZE),
+      ttl: this.BLOCK_INTERVAL,
+    }); // Initialize LRU cache
   }
 
   async onModuleInit() {
@@ -39,21 +45,28 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   private subscribeToNewBlockWithTransactionsEvent() {
-    this.newBlockObservable = this.ethersProvider
-      .getNewBlockObservable()
-      .pipe(
-        distinct(
-          (blockWithTransactions: BlockWithTransactions) =>
-            blockWithTransactions.number,
-        ),
-      );
-    this.newBlockObservable.subscribe(async (blockWithTransactions) => {
-      this.logger.debug(`Received new block: ${blockWithTransactions.number}`);
-      this.latestBlockNumber = blockWithTransactions.number;
-      if (!this.isBlockNumberSequential(this.latestBlockNumber))
-        await this.backfillCache();
+    this.newBlockObservable = this.ethersProvider.getNewBlockObservable();
 
-      await this.appendBlockToCache(blockWithTransactions);
+    this.newBlockObservable.subscribe({
+      next: async (blockWithTransactions) => {
+        if (
+          !this.latestBlockNumber ||
+          this.latestBlockNumber !== blockWithTransactions.number
+        ) {
+          this.logger.debug(
+            `Received new block: ${blockWithTransactions.number}`,
+          );
+          this.latestBlockNumber = blockWithTransactions.number;
+          if (!this.isBlockNumberSequential(this.latestBlockNumber))
+            await this.backfillCache();
+
+          await this.appendBlockToCache(blockWithTransactions);
+        } else {
+          this.logger.debug(
+            `Skipping duplicate block: ${blockWithTransactions.number}`,
+          );
+        }
+      },
     });
   }
 
@@ -175,9 +188,10 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   private isBlockNumberSequential(blockNumber: number): boolean {
-    if (this.isCacheEmpty()) return true;
-    const lastCachedBlockNumber = this.getLatestBlockFromCache().number;
-    return lastCachedBlockNumber + 1 === blockNumber;
+    return (
+      this.getLatestBlockFromCache().number + 1 === blockNumber &&
+      this.hasBlockInCache(blockNumber)
+    );
   }
 
   private isCacheEmpty(): boolean {
@@ -198,9 +212,8 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   isCacheStale(): boolean {
     const latestBlockTimestamp = this.getLatestBlockFromCache().timestamp;
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    const blockInterval =
-      this.configService.getOrThrow<number>('BLOCK_INTERVAL');
-    const validBlockInterval = currentTimestamp - blockInterval;
+
+    const validBlockInterval = currentTimestamp - this.BLOCK_INTERVAL;
     return latestBlockTimestamp < validBlockInterval;
   }
 }

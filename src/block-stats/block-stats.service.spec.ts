@@ -1,12 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { BlockStatsService } from './block-stats.service';
-import { BlockCacheService } from '../block-cache/block-cache.service';
-import { Ethers } from '../ethers/ethers';
 import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import { ConfigService } from '@nestjs/config';
-import { AppConfigModule } from '../config/config.module';
+import { Test, TestingModule } from '@nestjs/testing';
 import { constants } from 'ethers';
-import { BlockFeeData, BlockStat, Unit } from '../types/ethers';
+import { AppConfigModule } from '../config/config.module';
+import { Ethers } from '../ethers/ethers';
+import { BlockFeeData, Unit } from '../types/ethers';
+import { BlockStatsService } from './block-stats.service';
+import { BlockStat } from '../block-fees/dto/block-stat.dto';
 
 describe('BlockStatsService', () => {
   let blockStatService: BlockStatsService;

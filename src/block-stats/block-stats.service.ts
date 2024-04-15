@@ -5,7 +5,8 @@ import {
 import { Injectable } from '@nestjs/common';
 import { BigNumber, constants } from 'ethers';
 import { Ethers } from '../ethers/ethers';
-import { BlockFeeData, BlockStat, Range, Unit } from '../types/ethers';
+import { BlockFeeData, Range, Unit } from '../types/ethers';
+import { BlockStat } from '../block-fees/dto/block-stat.dto';
 
 @Injectable()
 export class BlockStatsService {
@@ -57,6 +58,7 @@ export class BlockStatsService {
   ): Promise<TransactionResponse[]> {
     const filteredTxs = await this.filterNonContractTransfers(transactions);
     return filteredTxs.filter((tx) => tx.value.gt(0) && tx.data === '0x');
+    // return transactions.filter((tx) => tx.value.gt(0) && tx.data === '0x');
   }
 
   // Calculate total fees per block

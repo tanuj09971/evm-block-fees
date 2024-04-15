@@ -9,8 +9,8 @@ import { Ethers } from '../ethers/ethers';
 import { BlockStatsService } from '../block-stats/block-stats.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
-import { BlockStat } from '../types/ethers';
 import { Logger } from '@nestjs/common';
+import { BlockStat } from './dto/block-stat.dto';
 
 describe('BlockFeesController', () => {
   let controller: BlockFeesController;
