@@ -51,36 +51,41 @@ Make sure you have Docker installed on your machine. If not, you can download an
 
 ### Optimized Web3 Interactions
 
-- I've integrated Web3_proxy to distribute requests across multiple Web3 servers, preventing any single server from being overwhelmed. This enhances the reliability and scalability of my Web3 interactions. All the RPCs I am using are listed in the `web3-proxy.toml` file
+- Web3 Proxy to distribute requests across multiple Web3 RPCs, preventing any single RPC from being overwhelmed. This enhances the reliability and scalability Web3 interactions with outside RPCs. The processes consuming this proxy keeps it as a sidecar process. All the RPCs are listed in the `web3-proxy.toml` file
 
 ### Real-time Block Data Handling
-
-- I'm using the Ethers.js library to establish a WebSocket provider, enabling real-time monitoring of new blocks on the blockchain.
-- New block events, along with their associated transactions, are published to streamline downstream processing.
+- Ethers module (`src/ethers`) establishes a WebSocket connection with sidecar Web3 Proxy to listen to new block events, under the hood, it uses ethers.js and have advanced features implemented for downstream modules:- 
+1. Block streaming using RxJS so dependent systems can subscribe to blocks
+2. Also stream BlocksWithTransactions for further processing
+3. Handle missed block events in situation where websocket connection were interrupted
+4. Exponential backoff and retries for RPC interactions
+5. A generic interface so it can be used for any new module as well
 
 ### Efficient Caching and Analytics
 
 - #### Block Cache Service
 
-  - A dedicated block cache service subscribes to the published new block events.
-  - The service utilizes an LRU (Least Recently Used) cache to efficiently store transaction data from new blocks.
-  - After appending new transactions to the cache, the block cache service publishes the updated block data for analytics processing.
+  - (`src/block-cache`) A dedicated block cache service, subscribes to the RxJS new block data.
+  - Store block with transaction data in LRU cache 
+  - Handle cache backfill on startup time to fill historical block data needed to serve stats of more than one block
+  - Publishes an RxJS even whenever the cache is updated with new block data (starts only after initial backfill), this allows downstream modules to perform any processing needed when new blocks are available
+  - Provides helper functions to know if cache is fresh or not.
 
 - #### Block Analytics Cache Service
 
-  - Subscribes to the events published by the block cache service.
-  - Updates a stats cache for upcoming blocks, enabling calculation of block-related statistics
+  - (`src/block-analytics-cache`) A dedicated block analytics cache service, which subscribes to cache updates from the block cache service
+  - Retreives the block data with transactions data and call (`src/block-stats`) service, which analyses the block transations and computes statistics
+  - After computation of stats, for specific lookback number of blocks, it maintains a cache in-memory to server stats in O(1) complexity
+  - It continuously keeps computing stats and keep the stats analytics cache fresh
 
 - #### Block Stats Service
 
-  - Calculates BlockStats for specified ranges of blocks (e.g., [1, 5, 30]).
-  - Updates the statsCache to provide fast access to statistical information.
+  - (`src/block-stats`) is a stateless service, takes block data as input and calculates stats.
 
 ## API for Block Fee Estimation
 
-- The /block-fees/estimate API is exposed from the block fees controller.
-- It takes a couple of minutes to fill the blocks upto max range of blocks.
-- This API leverages the block fees service, which retrieves pre-calculated stats from the statsCache in `O(1)` time, ensuring quick block fee estimations.
+- The (`src/block-fees`) is a module which exposes an API for block stats.
+- This API leverages the (`src/block-analytics-cache`), which retrieves pre-calculated stats from the statsCache in `O(1)` time, ensuring quick block fee estimations.
 - Swagger for the api is available on the route `/api`
 
 ## Folder structure
