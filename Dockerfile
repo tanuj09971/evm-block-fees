@@ -1,10 +1,9 @@
 FROM node:18-alpine
+RUN npm install -g pnpm 
 
 WORKDIR /usr/app
 
-COPY package.json .
-
-RUN npm install -g pnpm 
+ADD package.json pnpm-lock.yaml ./
 
 RUN pnpm install
 
