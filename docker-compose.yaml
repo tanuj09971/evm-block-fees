@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   web3-proxy:
     container_name: web3-proxy
