@@ -46,6 +46,11 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     this.blockAppendedSubject.unsubscribe();
   }
 
+  /**
+   * Subscribes to the new block event from the Ethers provider,
+   * handling block appending, duplicate block detection,
+   * and sequential gap filling logic.
+   */
   private subscribeToNewBlockWithTransactionsEvent() {
     this.newBlockObservable = this.ethersProvider.getNewBlockObservable();
 
@@ -66,6 +71,10 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  /**
+   * Handles duplicate block events, logging appropriate messages.
+   * @param blockNumber - The block number.
+   */
   private handleDuplicateBlock(blockNumber: number) {
     if (!this.shouldProcessNewBlock(blockNumber)) {
       this.logger.debug(`Skipping duplicate block: ${blockNumber}`);
@@ -74,15 +83,19 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     this.logger.debug(`Received duplicate block: ${blockNumber}`);
   }
 
+  /**
+   * Determines if a new block should be processed by comparing it
+   * to the latest cached block number.
+   * @param blockNumber - The block number to check.
+   * @returns `true` if the block is newer, `false` otherwise.
+   */
   private shouldProcessNewBlock(blockNumber: number): boolean {
     return !this.latestBlockNumber || this.latestBlockNumber < blockNumber;
   }
 
-  /*   `initialBackfillCache`:
-   *   Fetches the correct range of blocks.
-   *   Populates the cache in the correct order.
-   *   **Invalid Block Sequence:** `initialBackfillCache` handles out-of-order blocks.
-   *   Ensure it triggers cache refilling.
+  /**
+   * Fetches blocks to populate the cache during initialization.
+   * Handles cases where blocks might arrive out-of-order.
    */
   private async initialBackfillCache() {
     // Update latestBlockNumber if needed:
@@ -99,11 +112,18 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     await this.fillBlocksInCache(startingBlock);
   }
 
+  /**
+   * Fetches blocks to fill gaps in the cache when blocks are missed.
+   */
   private async backfillSequentialGaps() {
     const startingBlock = this.getLatestBlockFromCache().number + 1;
     await this.fillBlocksInCache(startingBlock);
   }
 
+  /**
+   * Iterates and fetches blocks within a range, adding them to the cache.
+   * @param startingBlock - The block number at which to start fetching.
+   */
   private async fillBlocksInCache(startingBlock: number) {
     // Only proceed if startingBlock is valid:
     if (startingBlock <= this.latestBlockNumber) {
@@ -126,15 +146,12 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
       }
     }
   }
-  /*   **Successful Append:** Verify that `appendBlockToCache`:
-    *   Correctly adds blocks to the LRU cache.
-    *   Emits an event on `blockAppendedSubject`.
-    
-*   **Block Already Present:**  Ensure that if a block is already in the cache, it's not re-added and no duplicate event is emitted.  
 
-*   **Cache Full:**  Test the behavior when the cache is full. Verify that:
-    *   The oldest block is evicted (based on LRU).
-    *   The new block is added. */
+  /**
+   * Adds a block to the LRU cache and emits an event if the cache is full.
+   * Handles cases where a block might already be present.
+   * @param blockWithTransactions - The block to add.
+   */
   private async appendBlockToCache(
     blockWithTransactions: BlockWithTransactions,
   ) {
@@ -157,23 +174,41 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     this.logger.debug('Cache size after adding:', this.blockCache.size);
   }
 
+  /**
+   * Returns an Observable that emits new blocks as they are added to the cache.
+   * Filters out duplicate blocks.
+   * @returns An Observable emitting new blocks.
+   */
   getBlockAppendedObservable(): Observable<BlockWithTransactions> {
     return this.blockAppendedSubject
       .asObservable()
       .pipe(distinct((block: BlockWithTransactions) => block.number));
   }
 
+  /**
+   * Checks if the cache has reached its maximum capacity.
+   * @returns `true` if the cache is full, `false` otherwise.
+   */
   isCacheUpdated(): boolean {
     return this.blockCache.size === this.MAX_CACHE_SIZE;
   }
 
+  /**
+   * Emits a new block on the `blockAppendedSubject` when
+   * the cache is full.
+   * @param blockWithTransactions - The new block that triggered the event.
+   */
   private emitBlockOnCacheUpdate(blockWithTransactions: BlockWithTransactions) {
     if (this.isCacheUpdated()) {
       this.blockAppendedSubject.next(blockWithTransactions);
     }
   }
 
-  // *   **`getLatestBlockFromCache`:** Test that it returns the correct latest block.
+  /**
+   * Retrieves the block with the highest block number from the cache.
+   * @returns The latest block in the cache.
+   * @throws Error if the cache is empty.
+   */
   getLatestBlockFromCache(): BlockWithTransactions {
     if (this.blockCache && this.isCacheEmpty()) {
       throw new Error('No blocks found in cache');
@@ -183,10 +218,12 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     return this.blockCache.get(latestKey) as BlockWithTransactions;
   }
 
-  /*   **`getLatestNBlocks`:**
-   *   Ensure it returns the correct number of blocks in the right order.
-   *   Verify it handles the case where  `n` exceeds the cache size.
-   *   Test that it throws the correct exception on an invalid value of `n`. */
+  /**
+   * Retrieves the specified number of latest blocks from the cache.
+   * @param n - The number of blocks to retrieve.
+   * @returns An array of the 'n' latest blocks.
+   * @throws BadRequestException if 'n' exceeds the maximum cache size.
+   */
   getLatestNBlocks(n: number): BlockWithTransactions[] {
     if (n > this.MAX_CACHE_SIZE) {
       throw new BadRequestException(
@@ -198,30 +235,56 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     return cacheKeys.map((key) => this.blockCache.get(key)!);
   }
 
+  /**
+   * Checks if the provided block number is the next expected sequential block.
+   * @param blockNumber - The block number to check.
+   * @returns `true` if sequential, `false` otherwise.
+   */
   private isBlockNumberSequential(blockNumber: number): boolean {
     return this.getLatestBlockFromCache().number + 1 === blockNumber;
   }
 
+  /**
+   * Checks if the block cache is currently empty.
+   * @returns `true` if the cache has no entries, `false` otherwise.
+   */
   private isCacheEmpty(): boolean {
     return this.blockCache.size === 0;
   }
 
+  /**
+   * Determines if a specific block is present in the cache.
+   * @param blockNumber - The block number to check for.
+   * @returns `true` if the block exists in the cache, `false` otherwise.
+   */
   private hasBlockInCache(blockNumber: number): boolean {
     return !this.isCacheEmpty() && this.blockCache.has(blockNumber);
   }
 
+  /**
+   * Sorts the block numbers in the cache in ascending order.
+   * @returns An array of sorted block numbers.
+   */
   sortBlockCache(): Array<number> {
     const keys = Array.from(this.blockCache.keys());
     keys.sort();
     return keys;
   }
 
+  /**
+   * Checks if the provided block number matches the latest cached block number.
+   * @param blockNumber - The block number to compare.
+   * @returns `true` if the block number is the latest, `false` otherwise.
+   */
   isLatestBlock(blockNumber: number): boolean {
     return blockNumber === this.latestBlockNumber;
   }
 
-  /*   **`isCacheStale`:** Test scenarios where the cache should and should 
-  not be considered stale based on the calculated timestamp. */
+  /**
+   * Determines if the cache is considered stale based on the timestamp of
+   * the latest block and the configured block interval.
+   * @returns `true` if the cache is stale, `false` otherwise.
+   */
   isCacheStale(): boolean {
     const latestBlockTimestamp = this.getLatestBlockFromCache().timestamp;
     const currentTimestamp = Math.floor(Date.now() / 1000);

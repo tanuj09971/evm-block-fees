@@ -13,6 +13,12 @@ export class BlockStatsService {
   private logger: Logger = new Logger(BlockStatsService.name);
   constructor(private ethersProvider: Ethers) {}
 
+  /**
+   * Calculates aggregated block statistics, including average transaction fees,
+   * over a specified range of blocks.
+   * @param blocks - An array of BlockWithTransactions objects.
+   * @returns BlockStat object containing calculated statistics.
+   */
   async calculateStats(blocks: BlockWithTransactions[]): Promise<BlockStat> {
     const blockFeeData = await this.calculateBlockEthTransactionFeeData(blocks);
     // Average native ETH transfer fees calculation
@@ -29,7 +35,12 @@ export class BlockStatsService {
     };
   }
 
-  // Filter out non-contract transactions
+  /**
+   * Filters out transactions that do not represent native ETH transfers
+   * (i.e., contract interactions and other non-standard transfers).
+   * @param transactions - An array of TransactionResponse objects.
+   * @returns An array of filtered transactions representing native ETH transfers.
+   */
   private async filterNonContractTransfers(
     transactions: TransactionResponse[],
   ): Promise<TransactionResponse[]> {
@@ -52,12 +63,21 @@ export class BlockStatsService {
       .map(({ tx }) => tx);
   }
 
+  /**
+   * Determines if a transaction represents a simple ETH transfer (non-contract interaction).
+   * @param code - The bytecode of the transaction's recipient (null if no recipient).
+   * @returns `true` if the transaction is a simple ETH transfer, `false` otherwise.
+   */
   private isNonContractTransfer(code: string | null): boolean {
     // Handle potential null bytecode
     return code !== null && code === '0x';
   }
 
-  // Filter out non-native ETH transfer from transactions
+  /**
+   * Filters out transactions that do not represent native ETH transfers.
+   * @param transactions - An array of TransactionResponse objects.
+   * @returns An array of filtered transactions representing only native ETH transfers.
+   */
   private async filterNativeEthTransfers(
     transactions: TransactionResponse[],
   ): Promise<TransactionResponse[]> {
@@ -65,7 +85,11 @@ export class BlockStatsService {
     return filteredTxs.filter((tx) => tx.value.gt(0) && tx.data === '0x');
   }
 
-  // Calculate total fees per block
+  /**
+   * Calculates the total transaction fees (base fee + priority fee) for each block.
+   * @param blocks - An array of BlockWithTransactions objects.
+   * @returns An array of BlockFeeData objects, each containing fee data for a block.
+   */
   private async calculateBlockEthTransactionFeeData(
     blocks: BlockWithTransactions[],
   ): Promise<BlockFeeData[]> {
@@ -87,6 +111,11 @@ export class BlockStatsService {
     return blockFeeData;
   }
 
+  /**
+   * Extracts the block number range represented by the provided array of blocks.
+   * @param blocks - An array of BlockWithTransactions objects.
+   * @returns A Range object containing the starting block, ending block, and total count.
+   */
   private getBlockRange(blocks: BlockWithTransactions[]): Range {
     const startBlock = blocks[0]?.number;
     const lastBlock = blocks[blocks.length - 1]?.number;
@@ -94,7 +123,11 @@ export class BlockStatsService {
     return { from: startBlock, to: lastBlock, total: numberOfBlocks };
   }
 
-  // Calculate average priority fee across transactions
+  /**
+   * Calculates the average maximum priority fee across transactions within a block.
+   * @param transactions - An array of TransactionResponse objects.
+   * @returns The average max priority fee as a BigNumber.
+   */
   private calculateAverageMaxPriorityFee(
     transactions: TransactionResponse[],
   ): BigNumber {
@@ -110,6 +143,11 @@ export class BlockStatsService {
     return totalMaxPriorityFees.div(txCount);
   }
 
+  /**
+   * Calculates the total maximum priority fees across all provided transactions.
+   * @param transactions - An array of TransactionResponse objects.
+   * @returns The total max priority fee as a BigNumber.
+   */
   private calculateTotalMaxPriorityFee(transactions: TransactionResponse[]) {
     return transactions.reduce((priorityFee: BigNumber, tx) => {
       return tx.maxPriorityFeePerGas
@@ -118,7 +156,11 @@ export class BlockStatsService {
     }, constants.Zero);
   }
 
-  // Calculate average native ETH transfer fee across blocks
+  /**
+   * Calculates the average native ETH transfer fee across a set of blocks.
+   * @param blocks - An array of BlockFeeData objects containing fee information for each block.
+   * @returns The average native ETH transfer fee as a BigNumber.
+   */
   private calculateAverageNativeEthTransferFee(
     blocks: BlockFeeData[],
   ): BigNumber {

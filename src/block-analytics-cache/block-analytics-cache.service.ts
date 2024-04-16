@@ -35,6 +35,7 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
 
     this.newBlockWithTransactionObservable.subscribe({
       next: async (block: BlockWithTransactions) => {
+        // block processing logic
         if (this.shouldProcessBlockForStatsUpdate(block)) {
           this.logger.debug(
             `Block received in BlockAnalyticsCacheService: ${block.number}`,
@@ -48,18 +49,33 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
     });
   }
 
+  /**
+   * Determines if a new block warrants updating the analytics cache.
+   * @param block - The new block received.
+   * @returns `true` if the block should trigger an update, `false` otherwise.
+   */
   private shouldProcessBlockForStatsUpdate(
     block: BlockWithTransactions,
   ): boolean {
     return !this.previousBlockNumber || this.previousBlockNumber < block.number;
   }
 
+  /**
+   * Retrieves analytics stats for the specified number of latest blocks.
+   * @param n - The number of blocks for which to retrieve stats.
+   * @returns The calculated block statistics.
+   * @throws ServiceUnavailableException if the cache is empty or incomplete.
+   */
   getStatsForLatestNBlocks(n: number): BlockStat {
     if (this.isStatsCacheEmpty() || !this.hasStatsForAllRanges())
       throw new ServiceUnavailableException();
     return this.statsCache.get(n) as BlockStat;
   }
 
+  /**
+   * Updates the analytics cache with stats for configured block ranges.
+   * Fetches blocks from the block cache and calculates relevant statistics.
+   */
   private async updateStatsCache(): Promise<void> {
     // Calculate stats for relevant ranges (1, 5, ... 30)
     this.logger.debug('Starting stats cache update');
@@ -81,10 +97,18 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
     }
   }
 
+  /**
+   * Checks if the analytics cache contains stats for all configured block ranges.
+   * @returns `true` if the cache is complete, `false` otherwise.
+   */
   private hasStatsForAllRanges(): boolean {
     return this.statsCache.size === this.statsForNBlocks.length;
   }
 
+  /**
+   * Checks if the analytics cache is empty.
+   * @returns `true` if the cache has no entries, `false` otherwise.
+   */
   private isStatsCacheEmpty(): boolean {
     return this.statsCache.size === 0;
   }

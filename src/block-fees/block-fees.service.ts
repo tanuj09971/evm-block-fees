@@ -14,6 +14,12 @@ export class BlockFeesService {
     this.blockRange = JSON.parse(this.configService.getOrThrow('BLOCK_RANGE'));
   }
 
+  /**
+   * Calculates fee estimates for various block ranges, retrieving the
+   * required data from the BlockAnalyticsCacheService.
+   * @returns An array of BlockStat objects, each representing the
+   * fee estimate for a configured block range.
+   */
   calculateFeeEstimate(): BlockStat[] {
     try {
       // Iterate over block ranges to calculate fee estimates for each range
