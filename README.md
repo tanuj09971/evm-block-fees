@@ -31,9 +31,12 @@ Make sure you have Docker installed on your machine. If not, you can download an
    - WSS_WEB3_URL: This variable specifies the wss protocoled web3 rpc url.
    - BLOCK_INTERVAL: This variable specifies the block interval in which a block is generated.
    - MAX_CACHE_SIZE: This variable specifies the maximum block range.
-   - BLOCK_RANGE: This variable specifies the total range of blocks. Adjust this variable to customize the block range for obtaining different ranges of blocks.
+   - BLOCK_RANGE: This is the list of number of N lookback blocks for which the stats should be serverd
 
    Please refer to the .env.example file for guidance on setting these variables appropriately.
+   ```bash
+   cp .env.example .env
+   ```
 
 4. Build and start the Docker containers using Docker Compose:
 
