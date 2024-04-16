@@ -12,9 +12,9 @@ max_head_block_age = 60
 
 # public limits are when no key is used. these are instead grouped by ip
 # 0 = block all public requests
-public_max_concurrent_requests = 1_000
+public_max_concurrent_requests = 1_00_000
 # 0 = block all public requests
-public_requests_per_period = 10_000
+public_requests_per_period = 1_00_000
 
 # 10GB of cache
 response_cache_max_bytes = 10_000_000_000
@@ -99,7 +99,7 @@ response_cache_max_bytes = 10_000_000_000
     display_name = "Drpc"
     http_url="https://eth.drpc.org"
     ws_url="wss://eth.drpc.org"
-    soft_limit = 1_000
+    soft_limit = 1_00_000
     
     [balanced_rpcs.tenderly]
     display_name = "Tenderly"

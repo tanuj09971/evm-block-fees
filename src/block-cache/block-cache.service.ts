@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LRUCache } from 'lru-cache';
-import { Observable, Subject, catchError, distinct } from 'rxjs';
+import { Observable, Subject, distinct } from 'rxjs';
 import { Ethers } from '../ethers/ethers';
 
 @Injectable()
@@ -37,6 +37,9 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     await this.backfillCache();
+    this.logger.debug(
+      `BlockCacheService initialized with max cache size: ${this.MAX_CACHE_SIZE} and block interval: ${this.BLOCK_INTERVAL} upto ${this.getLatestBlockFromCache().number}`,
+    );
     this.subscribeToNewBlockWithTransactionsEvent();
   }
 
@@ -59,8 +62,8 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
           this.latestBlockNumber = blockWithTransactions.number;
           if (!this.isBlockNumberSequential(this.latestBlockNumber))
             await this.backfillCache();
-
           await this.appendBlockToCache(blockWithTransactions);
+          this.emitIfCacheFull(blockWithTransactions);
         } else {
           this.logger.debug(
             `Skipping duplicate block: ${blockWithTransactions.number}`,
@@ -75,21 +78,21 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
    *   Populates the cache in the correct order.
    *   **Invalid Block Sequence:** `backfillCache` handles out-of-order blocks.
    *   Ensure it triggers cache refilling.
-   *   Log appropriate errors or warnings. */
+   */
   private async backfillCache() {
-    this.logger.debug('backfilling blocks');
     // Update latestBlockNumber if needed:
     this.latestBlockNumber = await this.ethersProvider.getLatestBlockNumber();
-    this.logger.debug(
-      'Latest block number to backfill upto',
-      this.latestBlockNumber,
-    );
+    this.logger.debug('backfilling blocks');
 
     // Determine startingBlock:
     const startingBlock = this.isCacheEmpty()
       ? this.latestBlockNumber - this.MAX_CACHE_SIZE + 1
       : this.getLatestBlockFromCache().number + 1; // Increment to fetch the next block
 
+    this.logger.debug(
+      `Latest block number to backfill from ${startingBlock} upto
+      ${this.latestBlockNumber}`,
+    );
     // Only proceed if startingBlock is valid:
     if (startingBlock <= this.latestBlockNumber) {
       for (
@@ -130,16 +133,18 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.logger.debug('Adding block:', number);
-    this.logger.debug('Adding block timestamp:', timestamp);
-    this.logger.debug('Cache size before adding:', this.blockCache.size);
+    this.logger.debug(
+      `Adding block: ${number}, Adding block timestamp: ${timestamp}, Cache size before adding: ${this.blockCache.size}`,
+    );
 
     // Add to LRU with the block timestamp
     this.blockCache.set(number, blockWithTransactions, {
       ttl: timestamp,
     });
+    this.logger.debug(
+      `Block From : ${this.getLatestBlockFromCache().number} appending to cache: ${number}`,
+    );
     this.logger.debug('Cache size after adding:', this.blockCache.size);
-    this.emitIfCacheFull(blockWithTransactions);
   }
 
   getBlockAppendedObservable(): Observable<BlockWithTransactions> {
@@ -173,10 +178,6 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
    *   Verify it handles the case where  `n` exceeds the cache size.
    *   Test that it throws the correct exception on an invalid value of `n`. */
   getLatestNBlocks(n: number): BlockWithTransactions[] {
-    this.logger.debug(
-      'TCL: BlockCacheService -> CacheSize',
-      this.blockCache.size,
-    );
     if (n > this.MAX_CACHE_SIZE) {
       throw new BadRequestException(
         `${n} exceeds hard limit ${this.MAX_CACHE_SIZE}`,
@@ -188,10 +189,7 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   private isBlockNumberSequential(blockNumber: number): boolean {
-    return (
-      this.getLatestBlockFromCache().number + 1 === blockNumber &&
-      this.hasBlockInCache(blockNumber)
-    );
+    return this.getLatestBlockFromCache().number + 1 === blockNumber;
   }
 
   private isCacheEmpty(): boolean {
@@ -208,7 +206,8 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
     return keys;
   }
 
-  // *   **`isCacheStale`:** Test scenarios where the cache should and should not be considered stale based on the calculated timestamp.
+  /*   **`isCacheStale`:** Test scenarios where the cache should and should 
+  not be considered stale based on the calculated timestamp. */
   isCacheStale(): boolean {
     const latestBlockTimestamp = this.getLatestBlockFromCache().timestamp;
     const currentTimestamp = Math.floor(Date.now() / 1000);

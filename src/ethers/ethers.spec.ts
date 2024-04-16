@@ -66,14 +66,14 @@ describe('Ethers', () => {
     it('should emit block numbers from the WebsocketProvider', async () => {
       await ethersService['setOnBlockListener']();
 
+      
+      const latestBlockNumber = await ethersService.getLatestBlockNumber();
       // Wait for lastBlockNumber to be updated
       await new Promise((resolve) =>
         setTimeout(resolve, (blockInterval - 2) * 1000),
       );
 
-      const latestBlockNumber = await ethersService.getLatestBlockNumber();
-
-      expect(ethersService['lastBlockNumber']+1).toBe(latestBlockNumber);
+      expect(ethersService['previousBlockNumber']+1).toBe(latestBlockNumber);
     }, 14000);
   });
 

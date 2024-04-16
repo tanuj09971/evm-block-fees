@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
+import { EthersModule } from '../ethers/ethers.module';
 import { BlockStatsService } from './block-stats.service';
-import { Ethers } from '../ethers/ethers';
 
 @Module({
-  providers: [BlockStatsService, Ethers],
+  imports: [EthersModule],
+  providers: [BlockStatsService],
 })
 export class BlockStatsModule {}

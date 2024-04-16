@@ -22,7 +22,7 @@ export class BlockFeesService {
       return feeEstimates;
     } catch (error) {
       this.logger.error(error);
-      throw error; // Re-throw for potential handling at a higher level
+      throw error;
     }
   }
 }

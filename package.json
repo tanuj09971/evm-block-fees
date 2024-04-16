@@ -36,9 +36,11 @@
     "class-validator": "^0.14.1",
     "ethers": "5.7",
     "joi": "^17.12.3",
+    "limiter": "^2.1.0",
     "lru-cache": "^10.2.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
+    "typescript-memoize": "^1.1.1",
     "typescript-retry-decorator": "^2.4.2"
   },
   "devDependencies": {

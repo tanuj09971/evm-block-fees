@@ -44,7 +44,8 @@ Make sure you have Docker installed on your machine. If not, you can download an
 ## Technologies Used
 
 - NestJs framework of Node.js
-- Web3-Proxy by llama nodes [here]('https://github.com/llamanodes/web3-proxy)
+- RxJs for publishing and subscribing to events
+- Web3-Proxy by llama nodes [here]('https://github.com/llamanodes/web3-proxy')
 - Ethers.js library to interact with Ethereum Blockchain
 
 ## Usage
@@ -54,7 +55,9 @@ Make sure you have Docker installed on your machine. If not, you can download an
 - Web3 Proxy to distribute requests across multiple Web3 RPCs, preventing any single RPC from being overwhelmed. This enhances the reliability and scalability Web3 interactions with outside RPCs. The processes consuming this proxy keeps it as a sidecar process. All the RPCs are listed in the `web3-proxy.toml` file
 
 ### Real-time Block Data Handling
-- Ethers module (`src/ethers`) establishes a WebSocket connection with sidecar Web3 Proxy to listen to new block events, under the hood, it uses ethers.js and have advanced features implemented for downstream modules:- 
+
+- Ethers module (`src/ethers`) establishes a WebSocket connection with sidecar Web3 Proxy to listen to new block events, under the hood, it uses ethers.js and have advanced features implemented for downstream modules:-
+
 1. Block streaming using RxJS so dependent systems can subscribe to blocks
 2. Also stream BlocksWithTransactions for further processing
 3. Handle missed block events in situation where websocket connection were interrupted
@@ -66,7 +69,7 @@ Make sure you have Docker installed on your machine. If not, you can download an
 - #### Block Cache Service
 
   - (`src/block-cache`) A dedicated block cache service, subscribes to the RxJS new block data.
-  - Store block with transaction data in LRU cache 
+  - Store block with transaction data in LRU cache
   - Handle cache backfill on startup time to fill historical block data needed to serve stats of more than one block
   - Publishes an RxJS even whenever the cache is updated with new block data (starts only after initial backfill), this allows downstream modules to perform any processing needed when new blocks are available
   - Provides helper functions to know if cache is fresh or not.
@@ -82,11 +85,17 @@ Make sure you have Docker installed on your machine. If not, you can download an
 
   - (`src/block-stats`) is a stateless service, takes block data as input and calculates stats.
 
-## API for Block Fee Estimation
+- ### Block Fee Module
 
-- The (`src/block-fees`) is a module which exposes an API for block stats.
+- The (`src/block-fees`) is a module which exposes an API `/estimate` endpoint for block stats.
 - This API leverages the (`src/block-analytics-cache`), it retrieves pre-calculated stats from the statsCache in `O(1)` time, ensuring quick block fee estimations.
 - Swagger for the api is available on the route `/api`
+- Additional endpoints for Health `/health` and for Swagger is available on the route `/api`
+
+## For Testing Purposes
+
+- Run `npm run test` to run the test cases and to run individual test cases use `jest <path-to-the-test-case>`
+-
 
 ## Folder structure
 

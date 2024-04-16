@@ -3,6 +3,7 @@
 /node_modules
 /build
 *.env
+example.web3-proxy.toml
 
 # Logs
 logs

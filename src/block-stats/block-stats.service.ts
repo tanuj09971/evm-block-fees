@@ -2,7 +2,7 @@ import {
   BlockWithTransactions,
   TransactionResponse,
 } from '@ethersproject/abstract-provider';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { BigNumber, constants } from 'ethers';
 import { Ethers } from '../ethers/ethers';
 import { BlockFeeData, Range, Unit } from '../types/ethers';
@@ -10,12 +10,12 @@ import { BlockStat } from '../block-fees/dto/block-stat.dto';
 
 @Injectable()
 export class BlockStatsService {
+  private logger: Logger = new Logger(BlockStatsService.name);
   constructor(private ethersProvider: Ethers) {}
 
-  // async calculateStats(blocks: BlockWithTransactions[]): Promise<BlockStat> {
   async calculateStats(blocks: BlockWithTransactions[]): Promise<BlockStat> {
     const blockFeeData = await this.calculateBlockEthTransactionFeeData(blocks);
-    // 1. Average native ETH transfer fees calculation
+    // Average native ETH transfer fees calculation
     const avgNativeEthTransferFee =
       this.calculateAverageNativeEthTransferFee(blockFeeData);
     const blocksRange = this.getBlockRange(blocks);
@@ -33,23 +33,27 @@ export class BlockStatsService {
   private async filterNonContractTransfers(
     transactions: TransactionResponse[],
   ): Promise<TransactionResponse[]> {
-    const filteredTransactionsPromises = [];
-    for (const tx of transactions) {
+    //Fetch bytecodes in parallel
+    const bytecodePromises = transactions.map(async (tx) => {
       if (tx.to) {
-        try {
-          const bytecode = await this.ethersProvider.getBytecode(tx.to);
-          if (bytecode.length === 2) filteredTransactionsPromises.push(tx);
-        } catch (error) {
-          throw Error(`filterNonContractTransfers: ${error}`);
-        }
+        return { tx, bytecode: await this.ethersProvider.getBytecode(tx.to) };
+      } else {
+        return { tx, bytecode: null }; // Assuming all transactions have 'to' field
       }
-    }
-    const filteredTransactions = await Promise.all(
-      filteredTransactionsPromises,
-    );
-    return filteredTransactions.filter(
-      (tx): tx is TransactionResponse => tx !== undefined,
-    );
+    });
+
+    //Wait for bytecode fetches to complete
+    const results = await Promise.all(bytecodePromises);
+
+    //Filter transactions based on bytecode
+    return results
+      .filter(({ bytecode }) => !this.isNonContractTransfer(bytecode))
+      .map(({ tx }) => tx);
+  }
+
+  private isNonContractTransfer(code: string | null): boolean {
+    // Handle potential null bytecode
+    return code === null || code === '0x';
   }
 
   // Filter out non-native ETH transfer from transactions
@@ -58,7 +62,6 @@ export class BlockStatsService {
   ): Promise<TransactionResponse[]> {
     const filteredTxs = await this.filterNonContractTransfers(transactions);
     return filteredTxs.filter((tx) => tx.value.gt(0) && tx.data === '0x');
-    // return transactions.filter((tx) => tx.value.gt(0) && tx.data === '0x');
   }
 
   // Calculate total fees per block
@@ -67,12 +70,14 @@ export class BlockStatsService {
   ): Promise<BlockFeeData[]> {
     const blockFeeData: BlockFeeData[] = [];
     for (const block of blocks) {
+      this.logger.debug(`Filtering transactions of block ${block.number}`);
       const nativeEthTxs = await this.filterNativeEthTransfers(
         block.transactions,
       );
       const averageMaxPriorityFee =
         this.calculateAverageMaxPriorityFee(nativeEthTxs);
 
+      this.logger.debug(`Calculating stats for block ${block.number}`);
       blockFeeData.push({
         baseFee: block.baseFeePerGas || constants.Zero,
         averagePriorityFee: averageMaxPriorityFee,

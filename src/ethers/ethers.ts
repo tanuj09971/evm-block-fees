@@ -2,13 +2,17 @@ import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
+import { RateLimiter } from 'limiter';
 import { Observable, Subject, catchError, distinct, fromEvent } from 'rxjs';
-import {
-  BackOffPolicy,
-  ExponentialBackoffStrategy,
-  Retryable,
-} from 'typescript-retry-decorator';
+import { Memoize } from 'typescript-memoize';
+import { Retryable } from 'typescript-retry-decorator';
 import { ConnectionStatus } from '../types/ethers';
+
+// Allow 300 requests per second
+const byteCodeLimiter = new RateLimiter({
+  tokensPerInterval: 300,
+  interval: 'second',
+});
 
 @Injectable()
 export class Ethers {
@@ -45,9 +49,9 @@ export class Ethers {
       'block',
     ).pipe(
       distinct((blockNumber: number) => blockNumber),
-      catchError((error) => {
+      catchError((error, caught) => {
         this.logger.error('Error in block observable:', error);
-        return this.handleWebSocketError(); // Handle other errors as before
+        return caught; // Return the caught observable to continue the stream
       }),
     );
 
@@ -66,30 +70,9 @@ export class Ethers {
       },
       error: async (err) => {
         this.logger.error('Error in block observable:', err);
-        await this.handleWebSocketError(); // Handle the error
+        throw err;
       },
     });
-  }
-
-  @Retryable({
-    maxAttempts: Number.MAX_VALUE,
-    backOffPolicy: BackOffPolicy.ExponentialBackOffPolicy,
-    backOff: 1000,
-    exponentialOption: {
-      maxInterval: 4000,
-      multiplier: 2,
-      backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
-    },
-  })
-  private async handleWebSocketError() {
-    try {
-      await this.disposeCurrentProvider(); // Close the failed connection
-      await this.initializeProvider(); // Attempt to re-establish connection
-      await this.setOnBlockListener(); // Set up the listener again
-    } catch (error) {
-      this.logger.error('Error recovering from WebSocket failure:', error);
-      throw error;
-    }
   }
 
   private async handleBlockEvent(blockNumber: number): Promise<void> {
@@ -127,13 +110,6 @@ export class Ethers {
 
   @Retryable({
     maxAttempts: Number.MAX_VALUE,
-    backOffPolicy: BackOffPolicy.ExponentialBackOffPolicy,
-    backOff: 1000,
-    exponentialOption: {
-      maxInterval: 4000,
-      multiplier: 2,
-      backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
-    },
   })
   private async establishWebsocketConnectionWithRetries(
     wssUrl: string,
@@ -167,13 +143,6 @@ export class Ethers {
 
   @Retryable({
     maxAttempts: Number.MAX_VALUE,
-    backOffPolicy: BackOffPolicy.ExponentialBackOffPolicy,
-    backOff: 1000,
-    exponentialOption: {
-      maxInterval: 4000,
-      multiplier: 2,
-      backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
-    },
   })
   async getLatestBlockNumber(): Promise<number> {
     try {
@@ -181,20 +150,13 @@ export class Ethers {
       return blockNumber;
     } catch (e) {
       this.logger.error(`getLatestBlockNumber: ${e}`);
-      await this.initializeProvider(); //reintialize it before trying this funciton again
       throw e;
     }
   }
 
+  @Memoize((blockNumber: number) => blockNumber)
   @Retryable({
     maxAttempts: Number.MAX_VALUE,
-    backOffPolicy: BackOffPolicy.ExponentialBackOffPolicy,
-    backOff: 1000,
-    exponentialOption: {
-      maxInterval: 4000,
-      multiplier: 2,
-      backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
-    },
   })
   async getBlockWithTransactionsByNumber(
     blockNumber: number,
@@ -205,35 +167,22 @@ export class Ethers {
       );
     } catch (e) {
       this.logger.error(`getBlockWithTransactions: ${e}`);
-      await this.initializeProvider(); //reintialize it before trying this funciton again
       throw e;
     }
   }
 
-  getWebsocketProvider(): ethers.providers.WebSocketProvider {
-    if (this.getConnectionState() === ConnectionStatus.Open) {
-      throw new Error('Websocket provider not connected');
-    }
-    return this.ethersWebsocketProvider;
-  }
-
+  @Memoize((address: string) => address)
   @Retryable({
     maxAttempts: Number.MAX_VALUE,
-    backOffPolicy: BackOffPolicy.ExponentialBackOffPolicy,
-    backOff: 1000,
-    exponentialOption: {
-      maxInterval: 4000,
-      multiplier: 2,
-      backoffStrategy: ExponentialBackoffStrategy.EqualJitter,
-    },
   })
   async getBytecode(address: string): Promise<string> {
     try {
       return await this.ethersWebsocketProvider.getCode(address);
     } catch (error) {
       this.logger.error('Error fetching bytecode:', error);
-      await this.initializeProvider();
       throw error;
+    } finally {
+      await byteCodeLimiter.removeTokens(1);
     }
   }
 

@@ -39,11 +39,7 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
           `Block received in BlockAnalyticsCacheService: ${block.number}`,
         );
         if (this.previousBlockNumber !== block.number) {
-          try {
-            await this.updateStatsCache();
-          } catch (error) {
-            this.logger.error(`Error updating stats cache: ${error.message}`);
-          }
+          await this.updateStatsCache();
         } else {
           this.logger.error(
             `Skipping stats cache update for block ${block.number}`,
@@ -58,7 +54,8 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
   }
 
   getStatsForLatestNBlocks(n: number): BlockStat {
-    if (this.isStatsCacheEmpty()) throw new ServiceUnavailableException();
+    if (this.isStatsCacheEmpty() || !this.isStatsCacheUpdated())
+      throw new ServiceUnavailableException();
     return this.statsCache.get(n) as BlockStat;
   }
 
@@ -67,17 +64,24 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
     this.logger.debug('Starting stats cache update');
     for (const n of this.statsForNBlocks) {
       const latestNBlocks = this.blockCacheService.getLatestNBlocks(n);
-      try {
-        const statsForLatestNBlocks =
-          await this.blockStatService.calculateStats(latestNBlocks);
-
-        this.statsCache.set(n, statsForLatestNBlocks); // Update cache
-      } catch (error) {
-        this.logger.error(
-          `Error calculating stats for ${n} blocks: ${error.message}`,
-        );
-      }
+      const statsForLatestNBlocks =
+        await this.blockStatService.calculateStats(latestNBlocks);
+      this.logger.debug(
+        `Stats calculated for ${n} blocks: ${JSON.stringify(
+          statsForLatestNBlocks,
+        )}`,
+      );
+      this.statsCache.set(n, statsForLatestNBlocks); // Update cache
+      this.logger.debug(
+        `Stats cache updated with ${n} blocks: ${JSON.stringify(
+          this.statsCache.get(n),
+        )}`,
+      );
     }
+  }
+
+  private isStatsCacheUpdated(): boolean {
+    return this.statsCache.size === this.statsForNBlocks.length;
   }
 
   private isStatsCacheEmpty(): boolean {

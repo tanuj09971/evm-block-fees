@@ -9,8 +9,9 @@ import { Ethers } from '../ethers/ethers';
 import { BlockStatsService } from '../block-stats/block-stats.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
-import { Logger } from '@nestjs/common';
+import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import { BlockStat } from './dto/block-stat.dto';
+import { BlockCacheModule } from '../block-cache/block-cache.module';
 
 describe('BlockFeesController', () => {
   let controller: BlockFeesController;
@@ -33,6 +34,7 @@ describe('BlockFeesController', () => {
           ttl: 1000,
           isGlobal: true,
         }),
+        BlockCacheModule,
       ],
       controllers: [BlockFeesController],
       providers: [
@@ -40,9 +42,7 @@ describe('BlockFeesController', () => {
         BlockFeesService,
         BlockStatsService,
         BlockAnalyticsCacheService,
-        BlockCacheService,
-        Ethers,
-        Logger
+        Logger,
       ],
     }).compile();
 
@@ -52,13 +52,26 @@ describe('BlockFeesController', () => {
       BlockAnalyticsCacheService,
     );
     configService = module.get<ConfigService>(ConfigService);
-    blockFeesService.blockRange = [1];
     mockResponse = [
       {
-        averageFeePerBlockInRange: '30446674301',
+        averageFeePerBlockInRange: '30446674334',
         fromBlockNumber: 19625447,
         toBlockNumber: 19625447,
         totalBlocks: 1,
+        unit: 'wei',
+      },
+      {
+        averageFeePerBlockInRange: '30446674320',
+        fromBlockNumber: 19625447,
+        toBlockNumber: 19625443,
+        totalBlocks: 5,
+        unit: 'wei',
+      },
+      {
+        averageFeePerBlockInRange: '30446674300',
+        fromBlockNumber: 19625447,
+        toBlockNumber: 19625418,
+        totalBlocks: 30,
         unit: 'wei',
       },
     ];
@@ -70,11 +83,16 @@ describe('BlockFeesController', () => {
 
   describe('getFeeEstimate', () => {
     it('should return the block stat response', async () => {
-      blockFeesService.blockRange.forEach((block) => {
-        blockAnalyticsCacheService['statsCache'].set(block, mockResponse[0]);
+      blockFeesService.blockRange.map((block, i) => {
+        blockAnalyticsCacheService['statsCache'].set(block, mockResponse[i]);
       });
-      const response = await controller.getFeeEstimate();
+      const response = controller.getFeeEstimate();
       expect(response).toEqual(mockResponse);
+    });
+    it('should throw ServiceUnavailable exception if the analytics cache is not updated', async () => {
+      expect(controller.getFeeEstimate()).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
     });
   });
 });
