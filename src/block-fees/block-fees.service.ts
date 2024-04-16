@@ -16,6 +16,7 @@ export class BlockFeesService {
 
   calculateFeeEstimate(): BlockStat[] {
     try {
+      // Iterate over block ranges to calculate fee estimates for each range
       const feeEstimates: BlockStat[] = this.blockRange.map((blocks: number) =>
         this.blockAnalyticsCacheService.getStatsForLatestNBlocks(blocks),
       );

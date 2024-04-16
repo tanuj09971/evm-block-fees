@@ -56,7 +56,7 @@ export class Ethers {
   }
 
   private async handleNewBlock(blockNumber: number) {
-    if (!this.previousBlockNumber || this.previousBlockNumber !== blockNumber) {
+    if (!this.previousBlockNumber || this.previousBlockNumber < blockNumber) {
       this.logger.debug(`Received new block number: ${blockNumber}`);
       this.previousBlockNumber = blockNumber;
       await this.handleBlockEvent(blockNumber);

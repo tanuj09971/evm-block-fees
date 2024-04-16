@@ -51,14 +51,11 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
   private shouldProcessBlockForStatsUpdate(
     block: BlockWithTransactions,
   ): boolean {
-    return (
-      this.previousBlockNumber !== block.number &&
-      this.blockCacheService.isLatestBlock(block.number)
-    );
+    return !this.previousBlockNumber || this.previousBlockNumber < block.number;
   }
 
   getStatsForLatestNBlocks(n: number): BlockStat {
-    if (this.isStatsCacheEmpty() || !this.isStatsCacheUpdated())
+    if (this.isStatsCacheEmpty() || !this.hasStatsForAllRanges())
       throw new ServiceUnavailableException();
     return this.statsCache.get(n) as BlockStat;
   }
@@ -84,7 +81,7 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
     }
   }
 
-  private isStatsCacheUpdated(): boolean {
+  private hasStatsForAllRanges(): boolean {
     return this.statsCache.size === this.statsForNBlocks.length;
   }
 

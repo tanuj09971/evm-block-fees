@@ -31,7 +31,6 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
       this.configService.getOrThrow<number>('BLOCK_INTERVAL');
     this.blockCache = new LRUCache({
       max: Number(this.MAX_CACHE_SIZE),
-      ttl: this.BLOCK_INTERVAL,
     }); // Initialize LRU cache
   }
 
@@ -76,7 +75,7 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   private shouldProcessNewBlock(blockNumber: number): boolean {
-    return !this.latestBlockNumber || this.latestBlockNumber !== blockNumber;
+    return !this.latestBlockNumber || this.latestBlockNumber < blockNumber;
   }
 
   /*   `initialBackfillCache`:
@@ -139,22 +138,21 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   private async appendBlockToCache(
     blockWithTransactions: BlockWithTransactions,
   ) {
-    const { number, timestamp } = blockWithTransactions;
-    if (this.hasBlockInCache(number)) {
-      this.logger.debug(`Block already present in the cache: ${number}`);
+    if (this.hasBlockInCache(blockWithTransactions.number)) {
+      this.logger.debug(
+        `Block already present in the cache: ${blockWithTransactions.number}`,
+      );
       return;
     }
 
     this.logger.debug(
-      `Adding block: ${number}, Adding block timestamp: ${timestamp}, Cache size before adding: ${this.blockCache.size}`,
+      `Adding block: ${blockWithTransactions.number}, Cache size before adding: ${this.blockCache.size}`,
     );
 
     // Add to LRU with the block timestamp
-    this.blockCache.set(number, blockWithTransactions, {
-      ttl: timestamp,
-    });
+    this.blockCache.set(blockWithTransactions.number, blockWithTransactions);
     this.logger.debug(
-      `Block From : ${this.getLatestBlockFromCache().number} appending to cache: ${number}`,
+      `Block From : ${this.getLatestBlockFromCache().number} appending to cache: ${blockWithTransactions.number}`,
     );
     this.logger.debug('Cache size after adding:', this.blockCache.size);
   }
