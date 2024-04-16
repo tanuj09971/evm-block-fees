@@ -161,3 +161,4 @@ Make sure you have Docker installed on your machine. If not, you can download an
 ## Remaining and TODOs
   - Complete the test cases and improve the coverage
   - Add all missing stats
+  - Handle chain reorgs
