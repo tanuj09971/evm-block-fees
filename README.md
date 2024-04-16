@@ -158,3 +158,6 @@ Make sure you have Docker installed on your machine. If not, you can download an
   - This assignment is intended to asses the knowlage of typescript and blockachain development skills
   - `O(1)` is achived in perspective of serving stats in consitant O(1) time and avoiding unpredictable performance degradation due to large number of lookback blocks or third party RPC calls via serving stats via cache and not having any computation/interactions done in request cycle 
 
+## Remaining and TODOs
+  - Complete the test cases and improve the coverage
+  - Add all missing stats
