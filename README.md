@@ -151,7 +151,7 @@ Make sure you have Docker installed on your machine. If not, you can download an
 ## Known limitations
   - In memory caching and memoization may only work for a single process, since multiple processes will not share the same cache and memoization.
   - A large number of lookback blocks should be avoided as startup will take huge time backfilling historical blocks
-  - 
+  - Repetative computation is not properly optimized and can be improved
 
 
 ## Assumptions
