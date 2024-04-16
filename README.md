@@ -98,7 +98,7 @@ Make sure you have Docker installed on your machine. If not, you can download an
 ## Tests
 
 ```
-docker compose evm-block-fees npm run test`
+docker compose run --rm evm-block-fees pnpm run test
 ```
 
 ## Folder structure
