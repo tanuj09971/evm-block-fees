@@ -7,6 +7,7 @@ import { AppConfigModule } from '../config/config.module';
 import { Ethers } from '../ethers/ethers';
 import { BlockAnalyticsCacheService } from './block-analytics-cache.service';
 import { BlockStat } from '../block-fees/dto/block-stat.dto';
+import { BlockCacheModule } from '../block-cache/block-cache.module';
 
 describe('BlockAnalyticsCacheService', () => {
   let blockAnalyticsCacheService: BlockAnalyticsCacheService;
@@ -20,14 +21,8 @@ describe('BlockAnalyticsCacheService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [AppConfigModule],
-      providers: [
-        BlockAnalyticsCacheService,
-        BlockCacheService,
-        BlockStatsService,
-        Ethers,
-        ConfigService,
-      ],
+      imports: [AppConfigModule, BlockCacheModule],
+      providers: [BlockAnalyticsCacheService, BlockStatsService, ConfigService],
     }).compile();
 
     blockAnalyticsCacheService = module.get<BlockAnalyticsCacheService>(
@@ -38,14 +33,15 @@ describe('BlockAnalyticsCacheService', () => {
     blockStatsService = module.get<BlockStatsService>(BlockStatsService);
     ethersProvider = module.get<Ethers>(Ethers);
 
+    ethersProvider['ethersWebsocketProvider'] = await ethersProvider[
+      'establishWebsocketConnectionWithRetries'
+    ](configService.getOrThrow<string>('WSS_WEB3_URL'));
     let blockWithTransactionsArray = [];
-    for (let i = mockBlockNumber - N - 1; i <= mockBlockNumber; i++) {
+    for (let i = mockBlockNumber - N + 1; i <= mockBlockNumber; i++) {
       const blockWithTransactions =
         await ethersProvider.getBlockWithTransactionsByNumber(i);
 
-      blockCacheService['blockCache'].set(i, blockWithTransactions, {
-        ttl: blockWithTransactions.timestamp,
-      });
+      blockCacheService['blockCache'].set(i, blockWithTransactions);
       blockWithTransactionsArray.push(blockWithTransactions);
     }
     mockStatsForLatestNBlocks = await blockStatsService['calculateStats'](

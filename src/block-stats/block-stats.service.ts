@@ -36,7 +36,8 @@ export class BlockStatsService {
     //Fetch bytecodes in parallel
     const bytecodePromises = transactions.map(async (tx) => {
       if (tx.to) {
-        return { tx, bytecode: await this.ethersProvider.getBytecode(tx.to) };
+        const byteCode = await this.ethersProvider.getBytecode(tx.to);
+        return { tx, bytecode: byteCode };
       } else {
         return { tx, bytecode: null }; // Assuming all transactions have 'to' field
       }
@@ -47,13 +48,13 @@ export class BlockStatsService {
 
     //Filter transactions based on bytecode
     return results
-      .filter(({ bytecode }) => !this.isNonContractTransfer(bytecode))
+      .filter(({ bytecode }) => this.isNonContractTransfer(bytecode))
       .map(({ tx }) => tx);
   }
 
   private isNonContractTransfer(code: string | null): boolean {
     // Handle potential null bytecode
-    return code === null || code === '0x';
+    return code !== null && code === '0x';
   }
 
   // Filter out non-native ETH transfer from transactions

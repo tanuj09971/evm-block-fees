@@ -1,27 +1,35 @@
 import { BlockWithTransactions } from '@ethersproject/abstract-provider';
-import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { constants } from 'ethers';
+import { BlockCacheModule } from '../block-cache/block-cache.module';
+import { BlockStat } from '../block-fees/dto/block-stat.dto';
 import { AppConfigModule } from '../config/config.module';
 import { Ethers } from '../ethers/ethers';
 import { BlockFeeData, Unit } from '../types/ethers';
 import { BlockStatsService } from './block-stats.service';
-import { BlockStat } from '../block-fees/dto/block-stat.dto';
+import { ConfigService } from '@nestjs/config';
+import { config } from 'process';
 
 describe('BlockStatsService', () => {
   let blockStatService: BlockStatsService;
   let ethersProvider: Ethers;
   const mockBlockNumber = 19625447;
   let mockBlockWithTransactions: BlockWithTransactions;
+  let configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [AppConfigModule],
-      providers: [BlockStatsService, Ethers, ConfigService],
+      imports: [AppConfigModule, BlockCacheModule],
+      providers: [BlockStatsService, ConfigService],
     }).compile();
 
     blockStatService = module.get<BlockStatsService>(BlockStatsService);
+    configService = module.get<ConfigService>(ConfigService);
+    const wssUrl = configService.getOrThrow<string>('WSS_WEB3_URL');
     ethersProvider = module.get<Ethers>(Ethers);
+
+    ethersProvider['ethersWebsocketProvider'] =
+      await ethersProvider['establishWebsocketConnectionWithRetries'](wssUrl);
     mockBlockWithTransactions =
       await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
   }, 15000);
@@ -54,10 +62,10 @@ describe('BlockStatsService', () => {
 
       const bytecode = filteredTxs[0].to
         ? await ethersProvider.getBytecode(filteredTxs[0].to)
-        : constants.AddressZero;
-      const conditionCheck = bytecode.length === 2;
+        : '0x';
+      const conditionCheck = bytecode === null || bytecode === '0x';
       expect(conditionCheck).toBe(true);
-    }, 50000);
+    }, 10000);
   });
 
   describe('calculateAverageMaxPriorityFee', () => {
