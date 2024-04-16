@@ -44,7 +44,7 @@ Make sure you have Docker installed on your machine. If not, you can download an
 ## Technologies Used
 
 - NestJs framework of Node.js
-- RxJs for publishing and subscribing to events
+- RxJs for publishing and subscribing events
 - Web3-Proxy by llama nodes [here]('https://github.com/llamanodes/web3-proxy')
 - Ethers.js library to interact with Ethereum Blockchain
 
@@ -58,32 +58,33 @@ Make sure you have Docker installed on your machine. If not, you can download an
 
 - Ethers module (`src/ethers`) establishes a WebSocket connection with sidecar Web3 Proxy to listen to new block events, under the hood, it uses ethers.js and have advanced features implemented for downstream modules:-
 
-1. Block streaming using RxJS so dependent systems can subscribe to blocks
-2. Also stream BlocksWithTransactions for further processing
-3. Handle missed block events in situation where websocket connection were interrupted
-4. Exponential backoff and retries for RPC interactions
-5. A generic interface so it can be used for any new module as well
+  - Block streaming using RxJS so dependent systems can subscribe to blocks and even subscribe to BlocksWithTransactions
+  - Handle missed block events in situation where websocket connection were interrupted
+  - Infinite Retries for RPC interactions
+  - Memoizes the block data and account bytecode, since determining if an address is an EOA or Contract requires fetching the bytecode of the account, this is a heavy operation as there maybe hundreds of transactions introducing new addreses per block and we will need to filterout the Payable Contract Calls to get the native-eth-only-transactions, so it is memoized to prevent multiple RPC calls for the same address.
 
 ### Efficient Caching and Analytics
 
 - #### Block Cache Service
 
-  - (`src/block-cache`) A dedicated block cache service, subscribes to the RxJS new block data.
+  - (`src/block-cache`) A dedicated block cache service, subscribes to the RxJS new block data from ethers module
   - Store block with transaction data in LRU cache
   - Handle cache backfill on startup time to fill historical block data needed to serve stats of more than one block
   - Publishes an RxJS even whenever the cache is updated with new block data (starts only after initial backfill), this allows downstream modules to perform any processing needed when new blocks are available
-  - Provides helper functions to know if cache is fresh or not.
+  - Fill missing blocks even if upstream ethrs module miss publishing any block in sequential way
+  - Provides helper functions to know if block cache is fresh or not
 
 - #### Block Analytics Cache Service
 
   - (`src/block-analytics-cache`) A dedicated block analytics cache service, which subscribes to cache updates from the block cache service
   - Retreives the block data with transactions data and call (`src/block-stats`) service, which analyses the block transations and computes statistics
-  - After computation of stats, for specific lookback number of blocks, it maintains a cache in-memory to server stats in O(1) complexity
+  - After computation of stats, for specific lookback number of blocks, it maintains an in-memory cache to serve stats in O(1) complexity directly from cache
   - It continuously keeps computing stats and keep the stats analytics cache fresh
 
 - #### Block Stats Service
 
   - (`src/block-stats`) is a stateless service, takes block data as input and calculates stats.
+  - It filters out contracts calls to Payable function transfering native-eth as we only needs to calculate native-eth-transfer-average-fees 
 
 - ### Block Fee Module
 
@@ -92,7 +93,7 @@ Make sure you have Docker installed on your machine. If not, you can download an
 - Swagger for the api is available on the route `/api`
 - Additional endpoints for Health `/health` and for Swagger is available on the route `/api`
 
-## For Testing Purposes
+## Tests
 
 - Run `npm run test` to run the test cases and to run individual test cases use `jest <path-to-the-test-case>`
 -
@@ -146,3 +147,14 @@ Make sure you have Docker installed on your machine. If not, you can download an
 ├── tsconfig.build.json
 └── tsconfig.json
 ```
+
+## Known limitations
+  - In memory caching and memoization may only work for a single process, since multiple processes will not share the same cache and memoization.
+  - A large number of lookback blocks should be avoided as startup will take huge time backfilling historical blocks
+  - 
+
+
+## Assumptions
+  - This assignment is intended to asses the knowlage of typescript and blockachain development skills
+  - `O(1)` is achived in perspective of serving stats in consitant O(1) time and avoiding unpredictable performance degradation due to large number of lookback blocks or third party RPC calls via serving stats via cache and not having any computation/interactions done in request cycle 
+
