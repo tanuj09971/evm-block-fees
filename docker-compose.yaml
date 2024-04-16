@@ -1,6 +1,5 @@
 services:
   web3-proxy:
-    container_name: web3-proxy
     image: tanuj09971/web3-proxy
     ports:
       - '8544:8544'
@@ -17,26 +16,16 @@ services:
       start_period: 5s
     volumes:
       - ./web3-proxy.toml:/web3-proxy.toml
-    networks:
-      - evm-block-network
 
   evm-block-fees:
-    container_name: evm-block-fees
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - '3000:3000'
     restart: unless-stopped
-    depends_on:
-      web3-proxy:
-        condition: service_healthy
+    # depends_on:
+    #   web3-proxy:
+    #     condition: service_healthy
     env_file:
       - .env
-    networks:
-      - evm-block-network
-
-networks:
-  evm-block-network:
-    name: evm-block-network
-    driver: bridge

@@ -97,7 +97,9 @@ Make sure you have Docker installed on your machine. If not, you can download an
 
 ## Tests
 
-- Run `docker exec evm-block-fees npm run test` to run the test cases for the modules.
+```
+docker compose evm-block-fees npm run test`
+```
 
 ## Folder structure
 
