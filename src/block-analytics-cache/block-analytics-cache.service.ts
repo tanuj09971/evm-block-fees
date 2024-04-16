@@ -8,8 +8,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Observable } from 'rxjs';
 import { BlockCacheService } from '../block-cache/block-cache.service';
-import { BlockStatsService } from '../block-stats/block-stats.service';
 import { BlockStat } from '../block-fees/dto/block-stat.dto';
+import { BlockStatsService } from '../block-stats/block-stats.service';
 
 @Injectable()
 export class BlockAnalyticsCacheService implements OnModuleInit {
@@ -35,22 +35,26 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
 
     this.newBlockWithTransactionObservable.subscribe({
       next: async (block: BlockWithTransactions) => {
-        this.logger.debug(
-          `Block received in BlockAnalyticsCacheService: ${block.number}`,
-        );
-        if (this.previousBlockNumber !== block.number) {
+        if (this.shouldProcessBlockForStatsUpdate(block)) {
+          this.logger.debug(
+            `Block received in BlockAnalyticsCacheService: ${block.number}`,
+          );
+          this.previousBlockNumber = block.number;
           await this.updateStatsCache();
         } else {
-          this.logger.error(
-            `Skipping stats cache update for block ${block.number}`,
-          );
+          this.logger.error(`Skipping update for block ${block.number}`);
         }
       },
-      error: (error) => {
-        this.logger.error(error);
-        throw error; // Re-throw for potential handling at a higher level
-      },
     });
+  }
+
+  private shouldProcessBlockForStatsUpdate(
+    block: BlockWithTransactions,
+  ): boolean {
+    return (
+      this.previousBlockNumber !== block.number &&
+      this.blockCacheService.isLatestBlock(block.number)
+    );
   }
 
   getStatsForLatestNBlocks(n: number): BlockStat {

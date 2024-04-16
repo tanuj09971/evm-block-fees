@@ -47,32 +47,22 @@ export class Ethers {
     const blockObservable = fromEvent(
       this.ethersWebsocketProvider,
       'block',
-    ).pipe(
-      distinct((blockNumber: number) => blockNumber),
-      catchError((error, caught) => {
-        this.logger.error('Error in block observable:', error);
-        return caught; // Return the caught observable to continue the stream
-      }),
-    );
+    ).pipe(distinct((blockNumber) => blockNumber));
 
     blockObservable.subscribe({
-      next: async (blockNumber: number) => {
-        if (
-          !this.previousBlockNumber ||
-          this.previousBlockNumber !== blockNumber
-        ) {
-          this.logger.debug(`Recieved new block number: ${blockNumber}`);
-          this.previousBlockNumber = blockNumber;
-          await this.handleBlockEvent(blockNumber);
-        } else {
-          this.logger.debug(`Skipping duplicate block number: ${blockNumber}`);
-        }
-      },
-      error: async (err) => {
-        this.logger.error('Error in block observable:', err);
-        throw err;
-      },
+      next: async (blockNumber: number) =>
+        await this.handleNewBlock(blockNumber),
     });
+  }
+
+  private async handleNewBlock(blockNumber: number) {
+    if (!this.previousBlockNumber || this.previousBlockNumber !== blockNumber) {
+      this.logger.debug(`Received new block number: ${blockNumber}`);
+      this.previousBlockNumber = blockNumber;
+      await this.handleBlockEvent(blockNumber);
+    } else {
+      this.logger.debug(`Skipping duplicate block number: ${blockNumber}`);
+    }
   }
 
   private async handleBlockEvent(blockNumber: number): Promise<void> {
@@ -162,6 +152,10 @@ export class Ethers {
     blockNumber: number,
   ): Promise<BlockWithTransactions> {
     try {
+      this.logger.debug(
+        'TCL: Ethers -> constructor -> blockNumber',
+        blockNumber,
+      );
       return await this.ethersWebsocketProvider.getBlockWithTransactions(
         blockNumber,
       );

@@ -36,7 +36,7 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
-    await this.backfillCache();
+    await this.initialBackfillCache();
     this.logger.debug(
       `BlockCacheService initialized with max cache size: ${this.MAX_CACHE_SIZE} and block interval: ${this.BLOCK_INTERVAL} upto ${this.getLatestBlockFromCache().number}`,
     );
@@ -52,47 +52,60 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
 
     this.newBlockObservable.subscribe({
       next: async (blockWithTransactions) => {
-        if (
-          !this.latestBlockNumber ||
-          this.latestBlockNumber !== blockWithTransactions.number
-        ) {
-          this.logger.debug(
-            `Received new block: ${blockWithTransactions.number}`,
-          );
-          this.latestBlockNumber = blockWithTransactions.number;
-          if (!this.isBlockNumberSequential(this.latestBlockNumber))
-            await this.backfillCache();
-          await this.appendBlockToCache(blockWithTransactions);
-          this.emitIfCacheFull(blockWithTransactions);
-        } else {
-          this.logger.debug(
-            `Skipping duplicate block: ${blockWithTransactions.number}`,
-          );
-        }
+        this.handleDuplicateBlock(blockWithTransactions.number);
+        this.logger.debug(
+          `Received new block: ${blockWithTransactions.number}`,
+        );
+        this.latestBlockNumber = blockWithTransactions.number;
+
+        if (!this.isBlockNumberSequential(this.latestBlockNumber))
+          await this.backfillSequentialGaps();
+        else await this.appendBlockToCache(blockWithTransactions);
+
+        this.emitBlockOnCacheUpdate(blockWithTransactions);
       },
     });
   }
 
-  /*   `backfillCache`:
+  private handleDuplicateBlock(blockNumber: number) {
+    if (!this.shouldProcessNewBlock(blockNumber)) {
+      this.logger.debug(`Skipping duplicate block: ${blockNumber}`);
+      return;
+    }
+    this.logger.debug(`Received duplicate block: ${blockNumber}`);
+  }
+
+  private shouldProcessNewBlock(blockNumber: number): boolean {
+    return !this.latestBlockNumber || this.latestBlockNumber !== blockNumber;
+  }
+
+  /*   `initialBackfillCache`:
    *   Fetches the correct range of blocks.
    *   Populates the cache in the correct order.
-   *   **Invalid Block Sequence:** `backfillCache` handles out-of-order blocks.
+   *   **Invalid Block Sequence:** `initialBackfillCache` handles out-of-order blocks.
    *   Ensure it triggers cache refilling.
    */
-  private async backfillCache() {
+  private async initialBackfillCache() {
     // Update latestBlockNumber if needed:
     this.latestBlockNumber = await this.ethersProvider.getLatestBlockNumber();
     this.logger.debug('backfilling blocks');
 
     // Determine startingBlock:
-    const startingBlock = this.isCacheEmpty()
-      ? this.latestBlockNumber - this.MAX_CACHE_SIZE + 1
-      : this.getLatestBlockFromCache().number + 1; // Increment to fetch the next block
+    const startingBlock = this.latestBlockNumber - this.MAX_CACHE_SIZE + 1; // Increment to fetch the next block
 
     this.logger.debug(
       `Latest block number to backfill from ${startingBlock} upto
       ${this.latestBlockNumber}`,
     );
+    await this.fillBlocksInCache(startingBlock);
+  }
+
+  private async backfillSequentialGaps() {
+    const startingBlock = this.getLatestBlockFromCache().number + 1;
+    await this.fillBlocksInCache(startingBlock);
+  }
+
+  private async fillBlocksInCache(startingBlock: number) {
     // Only proceed if startingBlock is valid:
     if (startingBlock <= this.latestBlockNumber) {
       for (
@@ -114,7 +127,6 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
       }
     }
   }
-
   /*   **Successful Append:** Verify that `appendBlockToCache`:
     *   Correctly adds blocks to the LRU cache.
     *   Emits an event on `blockAppendedSubject`.
@@ -153,19 +165,19 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
       .pipe(distinct((block: BlockWithTransactions) => block.number));
   }
 
-  isCacheFull(): boolean {
+  isCacheUpdated(): boolean {
     return this.blockCache.size === this.MAX_CACHE_SIZE;
   }
 
-  private emitIfCacheFull(blockWithTransactions: BlockWithTransactions) {
-    if (this.isCacheFull()) {
+  private emitBlockOnCacheUpdate(blockWithTransactions: BlockWithTransactions) {
+    if (this.isCacheUpdated()) {
       this.blockAppendedSubject.next(blockWithTransactions);
     }
   }
 
   // *   **`getLatestBlockFromCache`:** Test that it returns the correct latest block.
   getLatestBlockFromCache(): BlockWithTransactions {
-    if (this.blockCache && this.blockCache.size === 0) {
+    if (this.blockCache && this.isCacheEmpty()) {
       throw new Error('No blocks found in cache');
     }
 
@@ -197,13 +209,17 @@ export class BlockCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   private hasBlockInCache(blockNumber: number): boolean {
-    return !this.isCacheEmpty() && !!this.blockCache.get(blockNumber);
+    return !this.isCacheEmpty() && this.blockCache.has(blockNumber);
   }
 
   sortBlockCache(): Array<number> {
     const keys = Array.from(this.blockCache.keys());
     keys.sort();
     return keys;
+  }
+
+  isLatestBlock(blockNumber: number): boolean {
+    return blockNumber === this.latestBlockNumber;
   }
 
   /*   **`isCacheStale`:** Test scenarios where the cache should and should 

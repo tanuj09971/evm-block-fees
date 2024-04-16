@@ -28,7 +28,7 @@ describe('Ethers', () => {
       await ethersService['establishWebsocketConnectionWithRetries'](
         wssWeb3Url,
       );
-  },15000);
+  }, 15000);
 
   afterEach(async () => {
     await ethersService['disposeCurrentProvider']();
@@ -66,14 +66,14 @@ describe('Ethers', () => {
     it('should emit block numbers from the WebsocketProvider', async () => {
       await ethersService['setOnBlockListener']();
 
-      
-      const latestBlockNumber = await ethersService.getLatestBlockNumber();
       // Wait for lastBlockNumber to be updated
       await new Promise((resolve) =>
         setTimeout(resolve, (blockInterval - 2) * 1000),
       );
 
-      expect(ethersService['previousBlockNumber']+1).toBe(latestBlockNumber);
+      const latestBlockNumber = await ethersService.getLatestBlockNumber();
+
+      expect(ethersService['previousBlockNumber']).toBe(latestBlockNumber);
     }, 14000);
   });
 

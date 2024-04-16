@@ -25,6 +25,7 @@ export class HealthController {
   cacheKey: string;
   blockInterval: number =
     this.configService.getOrThrow<number>('BLOCK_INTERVAL');
+  private readonly analyticsCacheRanges: Array<number>;
 
   constructor(
     private health: HealthCheckService,
@@ -32,7 +33,11 @@ export class HealthController {
     private readonly configService: ConfigService,
     private blockCacheService: BlockCacheService,
     private blockAnalyticsCacheService: BlockAnalyticsCacheService,
-  ) {}
+  ) {
+    this.analyticsCacheRanges = JSON.parse(
+      this.configService.getOrThrow('BLOCK_RANGE'),
+    );
+  }
 
   @Get()
   @HealthCheck()
@@ -40,14 +45,17 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Healthy' })
   @ApiResponse({ status: 503, description: 'Service unavailable' })
   healthCheck(): Promise<HealthCheckResult> {
-    return this.health.check([
+    const healthChecks = [
       () => this.web3ProxyHealthCheck.bind(this)(),
       () => this.ethBlockNumberHealthCheck.bind(this)(),
       () => this.blockCacheHealthCheck.bind(this)(),
-      () => this.analyticsCacheHealthCheck(1),
-      () => this.analyticsCacheHealthCheck(5),
-      () => this.analyticsCacheHealthCheck(30),
-    ]);
+    ];
+    // Dynamically create analyticsCacheHealthCheck calls
+    this.analyticsCacheRanges.forEach((range) => {
+      healthChecks.push(() => this.analyticsCacheHealthCheck(range));
+    });
+
+    return this.health.check(healthChecks);
   }
 
   // Health check functions
@@ -95,8 +103,8 @@ export class HealthController {
 
   private checkAnalyticsCache(n: number): boolean {
     try {
-      this.blockAnalyticsCacheService.getStatsForLatestNBlocks(n);
-      return true;
+      const blockStat = this.blockAnalyticsCacheService['statsCache'].get(n);
+      return blockStat ? true : false;
     } catch (error) {
       return false;
     }

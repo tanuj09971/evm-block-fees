@@ -52,7 +52,7 @@ Make sure you have Docker installed on your machine. If not, you can download an
 
 ### Optimized Web3 Interactions
 
-- Web3 Proxy to distribute requests across multiple Web3 RPCs, preventing any single RPC from being overwhelmed. This enhances the reliability and scalability Web3 interactions with outside RPCs. The processes consuming this proxy keeps it as a sidecar process. All the RPCs are listed in the `web3-proxy.toml` file
+- Web3 Proxy to distribute requests across multiple Web3 RPCs, preventing any single RPC from being overwhelmed. This enhances the reliability and scalability Web3 interactions with outside RPCs. The processes consuming this proxy keeps it as a sidecar process. All the RPCs are listed in the `web3-proxy.toml` file, can add or remove RPCs as per your requirement.
 
 ### Real-time Block Data Handling
 
@@ -90,13 +90,11 @@ Make sure you have Docker installed on your machine. If not, you can download an
 
 - The (`src/block-fees`) is a module which exposes an API `/estimate` endpoint for block stats.
 - This API leverages the (`src/block-analytics-cache`), it retrieves pre-calculated stats from the statsCache in `O(1)` time, ensuring quick block fee estimations.
-- Swagger for the api is available on the route `/api`
 - Additional endpoints for Health `/health` and for Swagger is available on the route `/api`
 
 ## Tests
 
-- Run `npm run test` to run the test cases and to run individual test cases use `jest <path-to-the-test-case>`
--
+- Run `docker exec evm-block-fees npm run test` to run the test cases for the modules.
 
 ## Folder structure
 

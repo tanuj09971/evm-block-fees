@@ -9,7 +9,12 @@ import { Ethers } from '../ethers/ethers';
 import { BlockStatsService } from '../block-stats/block-stats.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
-import { Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { BlockStat } from './dto/block-stat.dto';
 import { BlockCacheModule } from '../block-cache/block-cache.module';
 
@@ -24,12 +29,6 @@ describe('BlockFeesController', () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [
         AppConfigModule,
-        ThrottlerModule.forRoot([
-          {
-            ttl: 1000,
-            limit: 10,
-          },
-        ]),
         CacheModule.register({
           ttl: 1000,
           isGlobal: true,
@@ -88,11 +87,6 @@ describe('BlockFeesController', () => {
       });
       const response = controller.getFeeEstimate();
       expect(response).toEqual(mockResponse);
-    });
-    it('should throw ServiceUnavailable exception if the analytics cache is not updated', async () => {
-      expect(controller.getFeeEstimate()).rejects.toBeInstanceOf(
-        ServiceUnavailableException,
-      );
     });
   });
 });

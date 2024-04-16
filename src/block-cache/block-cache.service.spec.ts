@@ -42,7 +42,7 @@ describe('BlockCacheService', () => {
     expect(blockCacheService).toBeDefined();
   });
 
-  describe('backfillCache', () => {
+  describe('initialBackfillCache', () => {
     it('should fetch and populate the cache in case of partially filled cache', async () => {
       jest
         .spyOn(ethersProvider, 'getLatestBlockNumber')
@@ -57,7 +57,7 @@ describe('BlockCacheService', () => {
         latestBlockWithTransactions,
         { ttl: latestBlockWithTransactions.timestamp },
       );
-      await blockCacheService['backfillCache']();
+      await blockCacheService['initialBackfillCache']();
       const expectedCacheSize =
         mockBlockNumber - latestBlockWithTransactions.number + 1;
       expect(blockCacheService['blockCache'].size).toEqual(expectedCacheSize);

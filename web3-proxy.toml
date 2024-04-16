@@ -22,78 +22,29 @@ response_cache_max_bytes = 10_000_000_000
 # allowed_origin_requests_per_period changes the min_sum_soft_limit for requests with the specified (AND SPOOFABLE) Origin header
 # origins not in the list for requests without an rpc_key will use public_requests_per_period instead
 [app.allowed_origin_requests_per_period]
-"https://chainlist.org" = 1_000
+"https://chainlist.org" = 1_00_000
 
 [balanced_rpcs]
 
-    [balanced_rpcs.llamanodes]
-    display_name = "LlamaNodes"
-    block_data_limit = "archive"
-    http_url = "https://ethereum.llamarpc.com"
-    ws_url = "wss://ethereum.llamarpc.com"
-    
     [balanced_rpcs.publicnode]
     display_name = "PublicNode"
     block_data_limit = "archive"
     http_url = "https://ethereum-rpc.publicnode.com"
     ws_url = "wss://ethereum-rpc.publicnode.com"    
-
-    [balanced_rpcs.ankr]
-    display_name = "Ankr"
-    block_data_limit = 64
-    http_url = "https://rpc.ankr.com/eth"
-    soft_limit = 1_000
-
-    [balanced_rpcs.cloudflare]
-    display_name = "Cloudflare"
-    http_url = "https://cloudflare-eth.com"
-    soft_limit = 1_000
-
-    [balanced_rpcs.mycryptoapi]
-    display_name = "MyCrypto"
-    disabled = true
-    http_url = "https://api.mycryptoapi.com/eth"
-    soft_limit = 1_000
-
-    [balanced_rpcs.pokt-v1]
-    display_name = "Pokt #1"
-    http_url = "https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79"
-    soft_limit = 500
-
-    [balanced_rpcs.pokt]
-    display_name = "Pokt #2"
-    http_url = "https://eth-rpc.gateway.pokt.network"
-    soft_limit = 500
-
-    [balanced_rpcs.linkpool]
-    display_name = "Linkpool"
-    http_url = "https://main-rpc.linkpool.io"
-    soft_limit = 500
-
-    [balanced_rpcs.runonflux]
-    display_name = "Run on Flux (light)"
-    http_url = "https://ethereumnodelight.app.runonflux.io"
-    soft_limit = 1_000
-
-    # load balanced light nodes are not very reliable
-    [balanced_rpcs.linkpool-light]
-    display_name = "Linkpool (light)"
-    disabled = true
-    http_url = "https://main-light.eth.linkpool.io"
-    soft_limit = 100
+    soft_limit = 1_00_000
 
     [balanced_rpcs.publicnodes]
     display_name = "PublicNode"
     http_url = "https://ethereum-rpc.publicnode.com"
     ws_url = "wss://ethereum-rpc.publicnode.com"
-    soft_limit = 1_000
+    soft_limit = 1_00_000
     
     [balanced_rpcs.blastapi]
     display_name = "Blastapi"
     block_data_limit = 64
     http_url = "https://eth-mainnet.public.blastapi.io"
     ws_url= "wss://eth-mainnet.public.blastapi.io"
-    soft_limit = 1_000
+    soft_limit = 1_00_000
 
     [balanced_rpcs.drpc]
     display_name = "Drpc"
@@ -101,17 +52,12 @@ response_cache_max_bytes = 10_000_000_000
     ws_url="wss://eth.drpc.org"
     soft_limit = 1_00_000
     
-    [balanced_rpcs.tenderly]
-    display_name = "Tenderly"
-    ws_url="wss://mainnet.gateway.tenderly.co"
-    soft_limit = 1_000
-
     [balanced_rpcs.noderpc]
     display_name = "MyCrypto"
     disabled = true
     http_url= "https://www.noderpc.xyz/rpc-mainnet/public"
     ws_url = "wss://www.noderpc.xyz/ws/rpc-mainnet/public"
-    soft_limit = 1_000
+    soft_limit = 1_00_000
 
 
 [private_rpcs]
