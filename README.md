@@ -2,8 +2,8 @@
 
 EVM Block Fees is a versatile tool for calculating average native ETH transaction fees within customizable block ranges. It currently supports calculations for 1 block, 5 blocks, and 30 blocks, and can be easily extended to accommodate additional ranges.
 
-## Installation
-
+## Installation (Intel, AMD)
+Guide not designed to work on ARM like apple silicon
 ### Docker Installation
 
 Make sure you have Docker installed on your machine. If not, you can download and install Docker from [here](https://docs.docker.com/get-docker/).
