@@ -1,6 +1,6 @@
 services:
   web3-proxy:
-    image: alfredcapital/web3-proxy:a13fdb6c17366c0e5574156a7e492249a2b911a1
+    image: alfredcapital/web3-proxy:06979a135bd32c5646b4f62223a25e3d50d84901
     ports:
       - '8544:8544'
     restart: unless-stopped
