@@ -41,13 +41,25 @@ Make sure you have Docker installed on your machine. If not, you can download an
 4. Build and start the Docker containers using Docker Compose:
 
    ```bash
-   docker compose up --build
+   docker compose up -d
    ```
+
+5. Wait for Services to Start:
+
+   After starting the containers, it's crucial to wait until both services (evm-block-fees and web3-proxy) are fully up and you get healthy status for web3-proxy before proceeding with further actions.
+
+   Use the following command to monitor the status of the Docker services:
+
+   ```bash
+   docker ps
+   ```
+
+   This command lists all running Docker containers along with their names, images, status, and exposed ports. Ensure both evm-block-fees and web3-proxy services are running and their status is healthy.
 
 ## Technologies Used
 
-- NestJs framework of Node.js
-- RxJs for publishing and subscribing events
+- NestJS framework of Node.js
+- RxJS for publishing and subscribing events
 - Web3-Proxy by llama nodes [here]('https://github.com/llamanodes/web3-proxy')
 - Ethers.js library to interact with Ethereum Blockchain
 
