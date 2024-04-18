@@ -22,7 +22,6 @@ export interface Range {
   total: number;
 }
 
-
 export enum ConnectionStatus {
   Unknown = -1,
   Connecting = 0,
@@ -30,4 +29,3 @@ export enum ConnectionStatus {
   Closing = 2,
   Closed = 3,
 }
-

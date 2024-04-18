@@ -9,7 +9,8 @@ const CONFIG_SCHEMA = Joi.object({
   HTTPS_WEB3_URL: Joi.string().uri(),
   BLOCK_INTERVAL: Joi.number().integer(),
   MAX_CACHE_SIZE: Joi.number().integer(),
-  BLOCK_RANGE: Joi.string(),
+  BLOCK_LOOKBACK: Joi.string(),
+  BLOCK_LOOKBACK_ARRAY: Joi.array(),
 });
 
 @Global()

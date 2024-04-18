@@ -6,7 +6,10 @@ export default () => {
 
   const BLOCK_INTERVAL = process.env.BLOCK_INTERVAL || 14;
   const MAX_CACHE_SIZE = process.env.MAX_CACHE_SIZE || 30;
-  const BLOCK_RANGE = process.env.BLOCK_RANGE || '';
+  const BLOCK_LOOKBACK = process.env.BLOCK_LOOKBACK || '';
+  const BLOCK_LOOKBACK_ARRAY = BLOCK_LOOKBACK.split(',').map((val: string) =>
+    parseInt(val),
+  ) || [];
 
   return {
     PORT,
@@ -14,6 +17,7 @@ export default () => {
     HTTPS_WEB3_URL,
     BLOCK_INTERVAL,
     MAX_CACHE_SIZE,
-    BLOCK_RANGE,
+    BLOCK_LOOKBACK,
+    BLOCK_LOOKBACK_ARRAY,
   };
 };

@@ -6,7 +6,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { BigNumber, constants } from 'ethers';
 import { Ethers } from '../ethers/ethers';
 import { BlockFeeData, Range, Unit } from '../types/ethers';
-import { BlockStat } from '../block-fees/dto/block-stat.dto';
+import { BlockStats } from '../block-fees/dto/block-stats.dto';
+import { NativeEthTransfer } from '../block-fees/dto/native-eth-transfer.dto';
 
 @Injectable()
 export class BlockStatsService {
@@ -17,49 +18,83 @@ export class BlockStatsService {
    * Calculates aggregated block statistics, including average transaction fees,
    * over a specified range of blocks.
    * @param blocks - An array of BlockWithTransactions objects.
-   * @returns BlockStat object containing calculated statistics.
+   * @returns BlockStats object containing calculated statistics.
    */
-  async calculateStats(blocks: BlockWithTransactions[]): Promise<BlockStat> {
+  async calculateStats(blocks: BlockWithTransactions[]): Promise<BlockStats> {
     const blockFeeData = await this.calculateBlockEthTransactionFeeData(blocks);
+
+    // Average base fee and priority fee
+    const avgBaseAndPriorityFee =
+      this.calculateAvgBaseAndPriorityFee(blockFeeData);
+
     // Average native ETH transfer fees calculation
     const avgNativeEthTransferFee =
       this.calculateAverageNativeEthTransferFee(blockFeeData);
     const blocksRange = this.getBlockRange(blocks);
 
+    const nativeEthTransfer: NativeEthTransfer = {
+      averageFee: avgNativeEthTransferFee.toString(),
+      unit: Unit.Wei,
+      priorityFee: avgBaseAndPriorityFee.avgPriorityFee,
+      baseFee: avgBaseAndPriorityFee.avgBaseFee,
+    };
+
     return {
-      averageFeePerBlockInRange: avgNativeEthTransferFee.toString(),
+      nativeEthTransfer,
       fromBlockNumber: blocksRange.from,
       toBlockNumber: blocksRange.to,
       totalBlocks: blocksRange.total,
-      unit: Unit.Wei,
+    };
+  }
+
+  private calculateAvgBaseAndPriorityFee(blockFeeData: BlockFeeData[]) {
+    const totalBaseFee = blockFeeData.reduce(
+      (totalBaseFee, fee) => totalBaseFee.add(fee.baseFee),
+      constants.Zero,
+    );
+    const totalPriorityFee = blockFeeData.reduce(
+      (totalPriorityFee, fee) => totalPriorityFee.add(fee.averagePriorityFee),
+      constants.Zero,
+    );
+    const avgBaseFee = totalBaseFee.div(blockFeeData.length);
+    const avgPriorityFee = totalPriorityFee.div(blockFeeData.length);
+    return {
+      avgBaseFee: avgBaseFee.toString(),
+      avgPriorityFee: avgPriorityFee.toString(),
     };
   }
 
   /**
-   * Filters out transactions that do not represent native ETH transfers
-   * (i.e., contract interactions and other non-standard transfers).
-   * @param transactions - An array of TransactionResponse objects.
-   * @returns An array of filtered transactions representing native ETH transfers.
+   * Filters out transactions that do not represent simple native ETH transfers
+   * (i.e., transactions involving contract interactions or other non-standard transfers).
+   * Transactions are filtered based on both the recipient ('to') and sender ('from') addresses.
+   * @param transactions - An array of TransactionResponse objects representing Ethereum transactions.
+   * @returns An array of filtered transactions representing simple native ETH transfers.
    */
   private async filterNonContractTransfers(
     transactions: TransactionResponse[],
   ): Promise<TransactionResponse[]> {
-    //Fetch bytecodes in parallel
+    // Fetch bytecode for 'to' and 'from' addresses in parallel
     const bytecodePromises = transactions.map(async (tx) => {
-      if (tx.to) {
-        const byteCode = await this.ethersProvider.getBytecode(tx.to);
-        return { tx, bytecode: byteCode };
+      if (tx.to && tx.from) {
+        const toByteCode = await this.ethersProvider.getBytecode(tx.to);
+        const fromByteCode = await this.ethersProvider.getBytecode(tx.from);
+        return { tx, toByteCode, fromByteCode };
       } else {
-        return { tx, bytecode: null }; // Assuming all transactions have 'to' field
+        return { tx, toByteCode: null, fromByteCode: null };
       }
     });
 
-    //Wait for bytecode fetches to complete
+    // Wait for bytecode fetches to complete
     const results = await Promise.all(bytecodePromises);
 
-    //Filter transactions based on bytecode
+    // Filter transactions based on bytecode of 'to' and 'from' addresses
     return results
-      .filter(({ bytecode }) => this.isNonContractTransfer(bytecode))
+      .filter(
+        ({ toByteCode, fromByteCode }) =>
+          this.isNonContractTransfer(toByteCode) &&
+          this.isNonContractTransfer(fromByteCode),
+      )
       .map(({ tx }) => tx);
   }
 

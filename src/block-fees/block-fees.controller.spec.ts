@@ -15,7 +15,7 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { BlockStat } from './dto/block-stat.dto';
+import { BlockStats } from './dto/block-stats.dto';
 import { BlockCacheModule } from '../block-cache/block-cache.module';
 
 describe('BlockFeesController', () => {
@@ -23,7 +23,7 @@ describe('BlockFeesController', () => {
   let configService: ConfigService;
   let blockAnalyticsCacheService: BlockAnalyticsCacheService;
   let blockFeesService: BlockFeesService;
-  let mockResponse: BlockStat[];
+  let mockResponse: BlockStats[];
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -53,21 +53,21 @@ describe('BlockFeesController', () => {
     configService = module.get<ConfigService>(ConfigService);
     mockResponse = [
       {
-        averageFeePerBlockInRange: '30446674334',
+        averageOnlyNativeEthTransferFee: '30446674334',
         fromBlockNumber: 19625447,
         toBlockNumber: 19625447,
         totalBlocks: 1,
         unit: 'wei',
       },
       {
-        averageFeePerBlockInRange: '30446674320',
+        averageOnlyNativeEthTransferFee: '30446674320',
         fromBlockNumber: 19625447,
         toBlockNumber: 19625443,
         totalBlocks: 5,
         unit: 'wei',
       },
       {
-        averageFeePerBlockInRange: '30446674300',
+        averageOnlyNativeEthTransferFee: '30446674300',
         fromBlockNumber: 19625447,
         toBlockNumber: 19625418,
         totalBlocks: 30,

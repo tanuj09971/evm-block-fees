@@ -8,7 +8,7 @@ import { Ethers } from '../ethers/ethers';
 import { BlockCacheService } from '../block-cache/block-cache.service';
 import { BlockStatsService } from '../block-stats/block-stats.service';
 import { Logger } from '@nestjs/common';
-import { BlockStat } from './dto/block-stat.dto';
+import { BlockStats } from './dto/block-stats.dto';
 import { BlockCacheModule } from '../block-cache/block-cache.module';
 
 describe('BlockFeesService', () => {
@@ -18,7 +18,7 @@ describe('BlockFeesService', () => {
   let ethersProvider: Ethers;
   const mockBlockNumber = 19625447;
   let mockBlockWithTransactions: BlockWithTransactions;
-  let mockBlockStat: BlockStat[];
+  let mockBlockStat: BlockStats[];
   let wssWeb3Url: string;
 
   beforeEach(async () => {
@@ -48,21 +48,21 @@ describe('BlockFeesService', () => {
       await ethersProvider.getBlockWithTransactionsByNumber(mockBlockNumber);
     mockBlockStat = [
       {
-        averageFeePerBlockInRange: '30446674334',
+        averageOnlyNativeEthTransferFee: '30446674334',
         fromBlockNumber: 19625447,
         toBlockNumber: 19625447,
         totalBlocks: 1,
         unit: 'wei',
       },
       {
-        averageFeePerBlockInRange: '30446674320',
+        averageOnlyNativeEthTransferFee: '30446674320',
         fromBlockNumber: 19625447,
         toBlockNumber: 19625443,
         totalBlocks: 5,
         unit: 'wei',
       },
       {
-        averageFeePerBlockInRange: '30446674300',
+        averageOnlyNativeEthTransferFee: '30446674300',
         fromBlockNumber: 19625447,
         toBlockNumber: 19625418,
         totalBlocks: 30,

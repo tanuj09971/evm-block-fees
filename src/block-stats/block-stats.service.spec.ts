@@ -2,7 +2,7 @@ import { BlockWithTransactions } from '@ethersproject/abstract-provider';
 import { Test, TestingModule } from '@nestjs/testing';
 import { constants } from 'ethers';
 import { BlockCacheModule } from '../block-cache/block-cache.module';
-import { BlockStat } from '../block-fees/dto/block-stat.dto';
+import { BlockStats } from '../block-fees/dto/block-stats.dto';
 import { AppConfigModule } from '../config/config.module';
 import { Ethers } from '../ethers/ethers';
 import { BlockFeeData, Unit } from '../types/ethers';
@@ -120,7 +120,7 @@ describe('BlockStatsService', () => {
 
   describe('calculateStats', () => {
     it('should calculate the block stats', async () => {
-      const blockStat: BlockStat = await blockStatService.calculateStats([
+      const blockStat: BlockStats = await blockStatService.calculateStats([
         mockBlockWithTransactions,
       ]);
 
@@ -133,8 +133,8 @@ describe('BlockStatsService', () => {
         mockBlockWithTransactions,
       ]);
 
-      const mockStat: BlockStat = {
-        averageFeePerBlockInRange: mockAvgNativeEthTransferFee.toString(),
+      const mockStat: BlockStats = {
+        averageOnlyNativeEthTransferFee: mockAvgNativeEthTransferFee.toString(),
         fromBlockNumber: mockRange.from,
         toBlockNumber: mockRange.to,
         totalBlocks: mockRange.total,

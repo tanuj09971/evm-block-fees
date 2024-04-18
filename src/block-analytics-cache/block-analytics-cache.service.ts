@@ -8,12 +8,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Observable } from 'rxjs';
 import { BlockCacheService } from '../block-cache/block-cache.service';
-import { BlockStat } from '../block-fees/dto/block-stat.dto';
+import { BlockStats } from '../block-fees/dto/block-stats.dto';
 import { BlockStatsService } from '../block-stats/block-stats.service';
 
 @Injectable()
 export class BlockAnalyticsCacheService implements OnModuleInit {
-  private statsCache: Map<number, BlockStat> = new Map(); // Key: number of blocks, Value: stats
+  private statsCache: Map<number, BlockStats> = new Map(); // Key: number of blocks, Value: stats
   private readonly statsForNBlocks: Array<number>;
   private logger: Logger = new Logger(BlockAnalyticsCacheService.name);
   private newBlockWithTransactionObservable: Observable<BlockWithTransactions>;
@@ -24,9 +24,7 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
     private readonly blockCacheService: BlockCacheService,
     private blockStatService: BlockStatsService,
   ) {
-    this.statsForNBlocks = JSON.parse(
-      this.configService.getOrThrow('BLOCK_RANGE'),
-    );
+    this.statsForNBlocks = this.configService.getOrThrow('BLOCK_LOOKBACK_ARRAY');
   }
 
   async onModuleInit() {
@@ -66,10 +64,10 @@ export class BlockAnalyticsCacheService implements OnModuleInit {
    * @returns The calculated block statistics.
    * @throws ServiceUnavailableException if the cache is empty or incomplete.
    */
-  getStatsForLatestNBlocks(n: number): BlockStat {
+  getStatsForLatestNBlocks(n: number): BlockStats {
     if (this.isStatsCacheEmpty() || !this.hasStatsForAllRanges())
       throw new ServiceUnavailableException();
-    return this.statsCache.get(n) as BlockStat;
+    return this.statsCache.get(n) as BlockStats;
   }
 
   /**

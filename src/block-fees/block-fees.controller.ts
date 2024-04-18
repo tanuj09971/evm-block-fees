@@ -1,7 +1,7 @@
 import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { BlockFeesService } from './block-fees.service';
-import { BlockStat } from './dto/block-stat.dto';
+import { BlockStats } from './dto/block-stats.dto';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @ApiTags('Block Fees')
@@ -13,10 +13,10 @@ export class BlockFeesController {
   @Get('estimate')
   @ApiOkResponse({
     description: 'Returns fee estimates for blocks',
-    type: BlockStat,
+    type: BlockStats,
     isArray: true,
   })
-  getFeeEstimate(): BlockStat[] {
+  getFeeEstimate(): BlockStats[] {
     return this.blockFeesService.calculateFeeEstimate();
   }
 }

@@ -6,7 +6,7 @@ import { BlockStatsService } from '../block-stats/block-stats.service';
 import { AppConfigModule } from '../config/config.module';
 import { Ethers } from '../ethers/ethers';
 import { BlockAnalyticsCacheService } from './block-analytics-cache.service';
-import { BlockStat } from '../block-fees/dto/block-stat.dto';
+import { BlockStats } from '../block-fees/dto/block-stats.dto';
 import { BlockCacheModule } from '../block-cache/block-cache.module';
 
 describe('BlockAnalyticsCacheService', () => {
@@ -16,7 +16,7 @@ describe('BlockAnalyticsCacheService', () => {
   let configService: ConfigService;
   let blockCacheService: BlockCacheService;
   let blockStatsService: BlockStatsService;
-  let mockStatsForLatestNBlocks: BlockStat;
+  let mockStatsForLatestNBlocks: BlockStats;
   const N = 5;
 
   beforeEach(async () => {
@@ -63,8 +63,8 @@ describe('BlockAnalyticsCacheService', () => {
     it('should update stats in cache for the latest N blocks', async () => {
       expect(
         blockAnalyticsCacheService['statsCache'].get(N)
-          ?.averageFeePerBlockInRange,
-      ).toEqual(mockStatsForLatestNBlocks.averageFeePerBlockInRange);
+          ?.averageOnlyNativeEthTransferFee,
+      ).toEqual(mockStatsForLatestNBlocks.averageOnlyNativeEthTransferFee);
     });
   });
 
@@ -73,8 +73,8 @@ describe('BlockAnalyticsCacheService', () => {
       const latestStats =
         blockAnalyticsCacheService.getStatsForLatestNBlocks(N);
 
-      expect(latestStats.averageFeePerBlockInRange).toEqual(
-        mockStatsForLatestNBlocks.averageFeePerBlockInRange,
+      expect(latestStats.averageOnlyNativeEthTransferFee).toEqual(
+        mockStatsForLatestNBlocks.averageOnlyNativeEthTransferFee,
       );
     });
     it('should throw service unavailable exception', async () => {

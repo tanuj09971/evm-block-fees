@@ -34,9 +34,7 @@ export class HealthController {
     private blockCacheService: BlockCacheService,
     private blockAnalyticsCacheService: BlockAnalyticsCacheService,
   ) {
-    this.analyticsCacheRanges = JSON.parse(
-      this.configService.getOrThrow('BLOCK_RANGE'),
-    );
+    this.analyticsCacheRanges = this.configService.getOrThrow('BLOCK_LOOKBACK_ARRAY');
   }
 
   @Get()
